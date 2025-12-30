@@ -6,7 +6,7 @@ A local CLI tool that starts a server offering a web interface to review staged 
 
 | Layer | Technology | Rationale |
 |-------|------------|-----------|
-| Runtime | Node.js 20+ | LTS, native TypeScript support via strip-types |
+| Runtime | Node.js 24+ | Native TypeScript (--experimental-strip-types), stable node:sqlite |
 | Language | TypeScript 5.x | Type safety, better maintainability |
 | Backend | Fastify 5.x | Fast, schema-based validation, OpenAPI support |
 | Database | SQLite (node:sqlite) | Zero deps, native Node.js, synchronous API |
