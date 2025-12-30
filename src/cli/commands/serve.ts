@@ -23,6 +23,7 @@ Options:
 export async function serveCommand(args: string[]) {
   const { values } = parseArgs({
     args,
+    allowNegative: true,
     options: {
       port: { type: 'string', short: 'p', default: '3847' },
       open: { type: 'boolean', default: true },

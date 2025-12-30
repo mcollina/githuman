@@ -4,6 +4,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import authPlugin from './plugins/auth.ts';
+import diffRoutes from './routes/diff.ts';
 import type { ServerConfig } from './config.ts';
 import type { HealthResponse } from '../shared/types.ts';
 
@@ -39,6 +40,9 @@ export async function buildApp(
 
   // Store config on app instance for routes to access
   app.decorate('config', config);
+
+  // Register routes
+  await app.register(diffRoutes);
 
   return app;
 }
