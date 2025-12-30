@@ -9,7 +9,9 @@
   "scripts": {
     "dev:server": "node --watch src/cli/index.ts serve",
     "start": "node src/cli/index.ts serve",
-    "test": "node --test 'tests/server/**/*.test.ts'",
+    "test": "npm run test:server && npm run test:cli",
+    "test:server": "node --test 'tests/server/**/*.test.ts'",
+    "test:cli": "node --test 'tests/cli/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests"
   },
