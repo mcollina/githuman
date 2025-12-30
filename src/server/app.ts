@@ -7,11 +7,16 @@ import authPlugin from './plugins/auth.ts';
 import type { ServerConfig } from './config.ts';
 import type { HealthResponse } from '../shared/types.ts';
 
-export async function buildApp(config: ServerConfig): Promise<FastifyInstance> {
+export interface AppOptions {
+  logger?: boolean;
+}
+
+export async function buildApp(
+  config: ServerConfig,
+  options: AppOptions = {}
+): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: {
-      level: 'info',
-    },
+    logger: options.logger ?? true,
   });
 
   // Register CORS for development
