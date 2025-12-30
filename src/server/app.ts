@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import authPlugin from './plugins/auth.ts';
 import diffRoutes from './routes/diff.ts';
+import reviewRoutes from './routes/reviews.ts';
 import type { ServerConfig } from './config.ts';
 import type { HealthResponse } from '../shared/types.ts';
 
@@ -43,6 +44,7 @@ export async function buildApp(
 
   // Register routes
   await app.register(diffRoutes);
+  await app.register(reviewRoutes);
 
   return app;
 }
