@@ -9,12 +9,12 @@ import { ExportService } from '../../server/services/export.service.ts';
 
 function printHelp() {
   console.log(`
-Usage: code-review export <review-id> [options]
+Usage: code-review export <review-id|last> [options]
 
 Export a review to markdown format.
 
 Arguments:
-  review-id              The ID of the review to export
+  review-id              The ID of the review to export, or "last" for the most recent
 
 Options:
   -o, --output <file>    Output file path (default: stdout)
@@ -22,6 +22,12 @@ Options:
   --no-snippets          Exclude diff snippets
   -h, --help             Show this help message
 `);
+}
+
+function getLastReviewId(db: ReturnType<typeof getDatabase>): string | null {
+  const stmt = db.prepare('SELECT id FROM reviews ORDER BY created_at DESC LIMIT 1');
+  const row = stmt.get() as { id: string } | undefined;
+  return row?.id ?? null;
 }
 
 export async function exportCommand(args: string[]) {
@@ -41,7 +47,7 @@ export async function exportCommand(args: string[]) {
     process.exit(0);
   }
 
-  const reviewId = positionals[0];
+  let reviewId = positionals[0];
 
   if (!reviewId) {
     console.error('Error: review-id is required\n');
@@ -54,6 +60,16 @@ export async function exportCommand(args: string[]) {
   try {
     initDatabase(config.dbPath);
     const db = getDatabase();
+
+    // Handle "last" keyword
+    if (reviewId === 'last') {
+      const lastId = getLastReviewId(db);
+      if (!lastId) {
+        console.error('Error: No reviews found');
+        process.exit(1);
+      }
+      reviewId = lastId;
+    }
 
     const exportService = new ExportService(db);
 
