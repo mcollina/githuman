@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { DiffView } from '../components/diff/DiffView';
-import { CommentProvider } from '../contexts/CommentContext';
+import { CommentProvider, useCommentContext } from '../contexts/CommentContext';
 import { useCommentStats } from '../hooks/useComments';
 import { useReview, useUpdateReview } from '../hooks/useReviews';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { reviewsApi } from '../api/reviews';
 import { cn } from '../lib/utils';
 import type { ReviewStatus } from '../../shared/types';
@@ -58,8 +59,41 @@ export function ReviewPage() {
   const { data, loading, error, refetch } = useReview(id!);
   const { update, loading: updating } = useUpdateReview();
   const [selectedFile, setSelectedFile] = useState<string | undefined>();
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number>(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const handleNextFile = useCallback(() => {
+    if (!data?.files.length) return;
+    const nextIndex = Math.min(selectedFileIndex + 1, data.files.length - 1);
+    setSelectedFileIndex(nextIndex);
+    const file = data.files[nextIndex];
+    const path = file.newPath || file.oldPath;
+    setSelectedFile(path);
+    // Scroll the file into view
+    document.getElementById(path)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [data?.files, selectedFileIndex]);
+
+  const handlePrevFile = useCallback(() => {
+    if (!data?.files.length) return;
+    const prevIndex = Math.max(selectedFileIndex - 1, 0);
+    setSelectedFileIndex(prevIndex);
+    const file = data.files[prevIndex];
+    const path = file.newPath || file.oldPath;
+    setSelectedFile(path);
+    document.getElementById(path)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [data?.files, selectedFileIndex]);
+
+  const handleEscape = useCallback(() => {
+    setShowDeleteConfirm(false);
+  }, []);
+
+  useKeyboardShortcuts({
+    onNextFile: handleNextFile,
+    onPrevFile: handlePrevFile,
+    onEscape: handleEscape,
+    enabled: !loading && !!data,
+  });
 
   const handleStatusChange = async (status: ReviewStatus) => {
     if (!id) return;
@@ -121,7 +155,12 @@ export function ReviewPage() {
         <Sidebar
           files={data.files}
           selectedFile={selectedFile}
-          onFileSelect={setSelectedFile}
+          onFileSelect={(path) => {
+            setSelectedFile(path);
+            const index = data.files.findIndex((f) => (f.newPath || f.oldPath) === path);
+            if (index >= 0) setSelectedFileIndex(index);
+          }}
+          selectedIndex={selectedFileIndex}
         />
         <div className="flex-1 flex flex-col">
           <div className="p-4 border-b border-gray-200 bg-white">

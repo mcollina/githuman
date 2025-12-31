@@ -4,6 +4,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getDatabase } from '../db/index.ts';
 import { ReviewService, ReviewError, type ReviewWithDetails, type ReviewListItem } from '../services/review.service.ts';
+import { ExportService } from '../services/export.service.ts';
 import type {
   CreateReviewRequest,
   UpdateReviewRequest,
@@ -147,6 +148,38 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/api/reviews/stats', async () => {
     const service = getService();
     return service.getStats(fastify.config.repositoryPath);
+  });
+
+  /**
+   * GET /api/reviews/:id/export
+   * Export review as markdown
+   */
+  fastify.get<{
+    Params: ReviewParams;
+    Querystring: {
+      includeResolved?: string;
+      includeDiffSnippets?: string;
+    };
+    Reply: string | { error: string };
+  }>('/api/reviews/:id/export', async (request, reply) => {
+    const db = getDatabase();
+    const exportService = new ExportService(db);
+
+    const { includeResolved, includeDiffSnippets } = request.query;
+
+    const markdown = exportService.exportToMarkdown(request.params.id, {
+      includeResolved: includeResolved !== 'false',
+      includeDiffSnippets: includeDiffSnippets !== 'false',
+    });
+
+    if (!markdown) {
+      return reply.code(404).send({
+        error: 'Review not found',
+      });
+    }
+
+    reply.header('Content-Type', 'text/markdown');
+    return markdown;
   });
 };
 
