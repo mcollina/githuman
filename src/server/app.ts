@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import authPlugin from './plugins/auth.ts';
 import diffRoutes from './routes/diff.ts';
 import reviewRoutes from './routes/reviews.ts';
+import commentRoutes from './routes/comments.ts';
 import type { ServerConfig } from './config.ts';
 import type { HealthResponse } from '../shared/types.ts';
 
@@ -52,6 +53,7 @@ export async function buildApp(
   // Register routes
   await app.register(diffRoutes);
   await app.register(reviewRoutes);
+  await app.register(commentRoutes);
 
   // Serve static files if enabled and dist/web exists
   if (options.serveStatic !== false) {

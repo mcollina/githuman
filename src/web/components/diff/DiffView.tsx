@@ -5,9 +5,10 @@ interface DiffViewProps {
   files: DiffFileType[];
   summary?: DiffSummary;
   selectedFile?: string;
+  allowComments?: boolean;
 }
 
-export function DiffView({ files, summary, selectedFile }: DiffViewProps) {
+export function DiffView({ files, summary, selectedFile, allowComments = false }: DiffViewProps) {
   if (files.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -73,6 +74,7 @@ export function DiffView({ files, summary, selectedFile }: DiffViewProps) {
             key={file.newPath || file.oldPath}
             file={file}
             defaultExpanded={filesToShow.length <= 5}
+            allowComments={allowComments}
           />
         ))}
       </div>

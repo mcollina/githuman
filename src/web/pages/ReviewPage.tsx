@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { DiffView } from '../components/diff/DiffView';
+import { CommentProvider } from '../contexts/CommentContext';
+import { useCommentStats } from '../hooks/useComments';
 import { useReview, useUpdateReview } from '../hooks/useReviews';
 import { reviewsApi } from '../api/reviews';
 import { cn } from '../lib/utils';
@@ -22,6 +24,32 @@ function formatDate(dateString: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function CommentStats({ reviewId }: { reviewId: string }) {
+  const { stats } = useCommentStats(reviewId);
+
+  if (!stats || stats.total === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="text-gray-500">
+        <span className="font-medium">{stats.total}</span> comments
+      </span>
+      {stats.unresolved > 0 && (
+        <span className="text-orange-600">
+          <span className="font-medium">{stats.unresolved}</span> unresolved
+        </span>
+      )}
+      {stats.resolved > 0 && (
+        <span className="text-green-600">
+          <span className="font-medium">{stats.resolved}</span> resolved
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function ReviewPage() {
@@ -88,7 +116,7 @@ export function ReviewPage() {
   const currentStatus = statusOptions.find((s) => s.value === data.status);
 
   return (
-    <>
+    <CommentProvider reviewId={id!}>
       <div className="flex-1 flex">
         <Sidebar
           files={data.files}
@@ -110,6 +138,9 @@ export function ReviewPage() {
                       {data.baseRef.slice(0, 8)}
                     </span>
                   )}
+                </div>
+                <div className="mt-2">
+                  <CommentStats reviewId={id!} />
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -141,6 +172,7 @@ export function ReviewPage() {
             files={data.files}
             summary={data.summary}
             selectedFile={selectedFile}
+            allowComments={true}
           />
         </div>
       </div>
@@ -173,6 +205,6 @@ export function ReviewPage() {
           </div>
         </div>
       )}
-    </>
+    </CommentProvider>
   );
 }

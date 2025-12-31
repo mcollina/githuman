@@ -3,10 +3,12 @@ import type { DiffHunk as DiffHunkType } from '../../../shared/types';
 
 interface DiffHunkProps {
   hunk: DiffHunkType;
+  filePath: string;
   showLineNumbers?: boolean;
+  allowComments?: boolean;
 }
 
-export function DiffHunk({ hunk, showLineNumbers = true }: DiffHunkProps) {
+export function DiffHunk({ hunk, filePath, showLineNumbers = true, allowComments = false }: DiffHunkProps) {
   const header = `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`;
 
   return (
@@ -16,7 +18,13 @@ export function DiffHunk({ hunk, showLineNumbers = true }: DiffHunkProps) {
       </div>
       <div>
         {hunk.lines.map((line, index) => (
-          <DiffLine key={index} line={line} showLineNumbers={showLineNumbers} />
+          <DiffLine
+            key={index}
+            line={line}
+            filePath={filePath}
+            showLineNumbers={showLineNumbers}
+            allowComments={allowComments}
+          />
         ))}
       </div>
     </div>

@@ -6,6 +6,7 @@ import type { DiffFile as DiffFileType } from '../../../shared/types';
 interface DiffFileProps {
   file: DiffFileType;
   defaultExpanded?: boolean;
+  allowComments?: boolean;
 }
 
 function getStatusBadge(status: DiffFileType['status']) {
@@ -30,15 +31,17 @@ function getStatusBadge(status: DiffFileType['status']) {
   );
 }
 
-export function DiffFile({ file, defaultExpanded = true }: DiffFileProps) {
+export function DiffFile({ file, defaultExpanded = true, allowComments = false }: DiffFileProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   const displayPath = file.status === 'renamed'
     ? `${file.oldPath} → ${file.newPath}`
     : file.newPath || file.oldPath;
 
+  const filePath = file.newPath || file.oldPath;
+
   return (
-    <div id={file.newPath || file.oldPath} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    <div id={filePath} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-3 flex items-center gap-3 bg-gray-50 hover:bg-gray-100 border-b border-gray-200 text-left"
@@ -66,7 +69,12 @@ export function DiffFile({ file, defaultExpanded = true }: DiffFileProps) {
         <div className="overflow-x-auto">
           {file.hunks.length > 0 ? (
             file.hunks.map((hunk, index) => (
-              <DiffHunk key={index} hunk={hunk} />
+              <DiffHunk
+                key={index}
+                hunk={hunk}
+                filePath={filePath}
+                allowComments={allowComments}
+              />
             ))
           ) : (
             <div className="p-4 text-center text-gray-500 text-sm">
