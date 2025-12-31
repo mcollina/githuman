@@ -2,6 +2,14 @@
 
 A local CLI tool for reviewing staged git changes with a web interface. Review your code before committing, add comments and suggestions, and export reviews to markdown.
 
+## Screenshots
+
+### Reviews List
+![Reviews List](docs/screenshots/home.png)
+
+### Staged Changes
+![Staged Changes](docs/screenshots/staged-changes.png)
+
 ## Features
 
 - **Web-based diff viewer** - Review staged changes in a clean, GitHub-like interface
