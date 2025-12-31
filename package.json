@@ -7,12 +7,15 @@
     "code-review": "./src/cli/index.ts"
   },
   "scripts": {
-    "dev:server": "node --watch src/cli/index.ts serve",
+    "dev": "vite",
+    "dev:server": "node --watch src/cli/index.ts serve --no-open",
+    "build": "vite build",
     "start": "node src/cli/index.ts serve",
     "test": "npm run test:server && npm run test:cli",
     "test:server": "node --test 'tests/server/**/*.test.ts'",
     "test:cli": "node --test 'tests/cli/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "lint": "eslint src tests"
   },
   "engines": {
@@ -30,20 +33,33 @@
     "@fastify/static": "^8.0.0",
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
+    "clsx": "^2.1.1",
     "diff": "^5.2.0",
     "diff2html": "^3.4.0",
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.0",
     "open": "^10.0.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router-dom": "^7.11.0",
     "shiki": "^1.0.0",
     "simple-git": "^3.25.0",
+    "tailwind-merge": "^3.4.0",
     "uuid": "^10.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/diff": "^5.2.0",
     "@types/node": "^22.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
-    "typescript": "^5.6.0"
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.6.0",
+    "vite": "^7.3.0"
   }
 }

@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --diff-added-bg: #e6ffec;
+  --diff-removed-bg: #ffebe9;
+  --diff-added-text: #24292f;
+  --diff-removed-text: #24292f;
+  --diff-hunk-bg: #f6f8fa;
+  --diff-line-number: #656d76;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+/* Diff line styles */
+.diff-line-added {
+  background-color: var(--diff-added-bg);
+}
+
+.diff-line-removed {
+  background-color: var(--diff-removed-bg);
+}
+
+.diff-line-number {
+  color: var(--diff-line-number);
+  @apply select-none text-right pr-2 text-sm font-mono;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}

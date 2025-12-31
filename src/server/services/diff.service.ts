@@ -1,7 +1,7 @@
 /**
  * Diff parsing service - parses unified diff format into structured data
  */
-import type { DiffFile, DiffHunk, DiffLine } from '../../shared/types.ts';
+import type { DiffFile, DiffHunk, DiffLine, DiffSummary } from '../../shared/types.ts';
 
 /**
  * Parse a unified diff string into structured diff files
@@ -209,12 +209,4 @@ export function getDiffSummary(files: DiffFile[]): DiffSummary {
   };
 }
 
-export interface DiffSummary {
-  totalFiles: number;
-  totalAdditions: number;
-  totalDeletions: number;
-  filesAdded: number;
-  filesModified: number;
-  filesDeleted: number;
-  filesRenamed: number;
-}
+export type { DiffSummary } from '../../shared/types.ts';

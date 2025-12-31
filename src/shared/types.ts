@@ -102,3 +102,13 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
+
+export interface DiffSummary {
+  totalFiles: number;
+  totalAdditions: number;
+  totalDeletions: number;
+  filesAdded: number;
+  filesModified: number;
+  filesDeleted: number;
+  filesRenamed: number;
+}
