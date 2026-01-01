@@ -38,7 +38,8 @@ local-code-reviewer/
 │   │   ├── commands/
 │   │   │   ├── serve.ts          # Start server command
 │   │   │   ├── list.ts           # List reviews command
-│   │   │   └── export.ts         # Export review command
+│   │   │   ├── export.ts         # Export review command
+│   │   │   └── todo.ts           # Todo management command
 │   │   └── utils/
 │   │       └── open-browser.ts
 │   │
@@ -55,6 +56,7 @@ local-code-reviewer/
 │   │   │   ├── reviews.ts        # Review CRUD endpoints
 │   │   │   ├── comments.ts       # Comment endpoints
 │   │   │   ├── diff.ts           # Diff generation endpoints
+│   │   │   ├── todos.ts          # Todo CRUD endpoints
 │   │   │   └── export.ts         # Export endpoints
 │   │   ├── services/
 │   │   │   ├── git.service.ts    # Git operations
@@ -64,7 +66,8 @@ local-code-reviewer/
 │   │   │   └── export.service.ts # Markdown export
 │   │   ├── repositories/
 │   │   │   ├── review.repo.ts    # Review data access
-│   │   │   └── comment.repo.ts   # Comment data access
+│   │   │   ├── comment.repo.ts   # Comment data access
+│   │   │   └── todo.repo.ts      # Todo data access
 │   │   ├── db/
 │   │   │   ├── index.ts          # Database connection
 │   │   │   ├── schema.ts         # Table definitions
@@ -96,6 +99,10 @@ local-code-reviewer/
 │   │   │   ├── suggestions/
 │   │   │   │   ├── SuggestionBlock.tsx   # Code suggestion display
 │   │   │   │   └── SuggestionEditor.tsx  # Create suggestions
+│   │   │   ├── todos/
+│   │   │   │   ├── TodoPanel.tsx         # Todo list panel/drawer
+│   │   │   │   ├── TodoItem.tsx          # Single todo item
+│   │   │   │   └── TodoInput.tsx         # Add todo input
 │   │   │   └── ui/                       # Reusable UI components
 │   │   │       ├── Button.tsx
 │   │   │       ├── Modal.tsx
@@ -104,7 +111,8 @@ local-code-reviewer/
 │   │   ├── hooks/
 │   │   │   ├── useReview.ts
 │   │   │   ├── useComments.ts
-│   │   │   └── useDiff.ts
+│   │   │   ├── useDiff.ts
+│   │   │   └── useTodos.ts
 │   │   ├── stores/               # State management (Zustand)
 │   │   │   ├── review.store.ts
 │   │   │   └── ui.store.ts
@@ -174,11 +182,24 @@ CREATE TABLE comments (
     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
 );
 
+-- Todos table: task tracking for reviews
+CREATE TABLE todos (
+    id TEXT PRIMARY KEY,                    -- UUID
+    content TEXT NOT NULL,                  -- Todo text content
+    completed INTEGER DEFAULT 0,            -- Boolean: 0 or 1
+    review_id TEXT,                         -- Optional: link to specific review
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+);
+
 -- Indexes for common queries
 CREATE INDEX idx_comments_review ON comments(review_id);
 CREATE INDEX idx_comments_file ON comments(review_id, file_path);
 CREATE INDEX idx_reviews_status ON reviews(status);
 CREATE INDEX idx_reviews_created ON reviews(created_at DESC);
+CREATE INDEX idx_todos_review ON todos(review_id);
+CREATE INDEX idx_todos_completed ON todos(completed);
 ```
 
 ---
@@ -222,6 +243,16 @@ CREATE INDEX idx_reviews_created ON reviews(created_at DESC);
 |--------|----------|-------------|
 | `GET` | `/api/git/branches` | List all branches |
 | `GET` | `/api/git/commits` | List recent commits (`?limit=20`) |
+
+### Todos
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/todos` | List all todos (filter: `?review_id=<id>`, `?completed=0|1`) |
+| `POST` | `/api/todos` | Create a new todo |
+| `PATCH` | `/api/todos/:id` | Update todo content or completed status |
+| `DELETE` | `/api/todos/:id` | Delete a todo |
+| `POST` | `/api/todos/:id/toggle` | Toggle completed status |
 
 ### Health & Meta
 
@@ -274,6 +305,46 @@ code-review export <review-id> [options]
 
 Options:
   -o, --output <file>    Output file path (default: stdout)
+```
+
+### `code-review todo`
+
+Manage todo items for tracking tasks during review.
+
+```bash
+code-review todo <subcommand> [options]
+
+Subcommands:
+  add <content>          Add a new todo item
+  list                   List all todos
+  done <id>              Mark todo as completed
+  undone <id>            Mark todo as not completed
+  remove <id>            Delete a todo
+  clear                  Remove todos (use with --done to clear completed)
+
+Options:
+  --review <id>          Scope todo to a specific review
+  --done                 Filter to show only completed todos (list) or clear completed (clear)
+  --pending              Filter to show only pending todos
+  --json                 Output as JSON
+```
+
+Examples:
+```bash
+# Add a todo
+code-review todo add "Fix the type error in utils.ts"
+
+# List all pending todos
+code-review todo list --pending
+
+# Mark todo as done (use first few characters of ID)
+code-review todo done abc123
+
+# Clear all completed todos
+code-review todo clear --done
+
+# Add a todo linked to a specific review
+code-review todo add "Address comment on line 42" --review <review-id>
 ```
 
 ---
@@ -501,6 +572,48 @@ Options:
    - Add `source_type` column: 'staged' | 'branch' | 'commits'
    - Add `source_ref` column for branch name or commit SHAs
    - Migration to handle existing data
+
+### Phase 10: Todo List Feature
+
+**Goal**: Add a todo list for tracking tasks during code review
+
+1. Database schema for todos
+   - Create `todos` table with id, content, completed, review_id (optional), created_at, updated_at
+   - Todos can be global (repository-level) or linked to a specific review
+   - Index on review_id for fast filtering
+
+2. Todo API endpoints
+   - `GET /api/todos` - List all todos (with optional `?review_id=<id>` filter)
+   - `POST /api/todos` - Create a new todo
+   - `PATCH /api/todos/:id` - Update todo (content, completed status)
+   - `DELETE /api/todos/:id` - Delete a todo
+   - `POST /api/todos/:id/toggle` - Toggle completed status
+
+3. CLI commands for todo management
+   - `code-review todo add <content>` - Add a new todo
+   - `code-review todo list` - List all todos (with `--all`, `--done`, `--pending` filters)
+   - `code-review todo done <id>` - Mark todo as completed
+   - `code-review todo undone <id>` - Mark todo as not completed
+   - `code-review todo remove <id>` - Delete a todo
+   - `code-review todo clear --done` - Remove all completed todos
+   - Support `--json` output for all list operations
+   - Support `--review <id>` to scope todos to a specific review
+
+4. UI components
+   - Todo panel accessible from sidebar or header
+   - Slide-out drawer or modal for todo list
+   - Add todo inline input with enter to submit
+   - Checkbox to toggle completion
+   - Click to edit todo content
+   - Delete button with confirmation
+   - Filter tabs: All / Pending / Completed
+   - Optional: link todo to current review being viewed
+   - Drag-and-drop reordering (optional)
+
+5. Integration with reviews
+   - Show todo count badge in UI
+   - Quick-add todo from comment (convert comment to todo)
+   - Filter todos by review when viewing a specific review
 
 ---
 
