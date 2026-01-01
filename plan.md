@@ -146,13 +146,13 @@ local-code-reviewer/
 ## Database Schema
 
 ```sql
--- Reviews table: snapshots of staged changes
+-- Reviews table: snapshots of changes (staged, branch, or commits)
 CREATE TABLE reviews (
     id TEXT PRIMARY KEY,                    -- UUID
-    title TEXT NOT NULL,
-    description TEXT,
     repository_path TEXT NOT NULL,          -- Absolute path to repo
     base_ref TEXT,                          -- Git ref (HEAD, commit SHA)
+    source_type TEXT DEFAULT 'staged',      -- 'staged' | 'branch' | 'commits'
+    source_ref TEXT,                        -- Branch name, commit SHAs, etc.
     snapshot_data TEXT NOT NULL,            -- JSON: serialized diff data
     status TEXT DEFAULT 'in_progress',      -- in_progress | approved | changes_requested
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -213,6 +213,15 @@ CREATE INDEX idx_reviews_created ON reviews(created_at DESC);
 |--------|----------|-------------|
 | `GET` | `/api/diff/staged` | Get current staged changes |
 | `GET` | `/api/diff/files` | List files with staged changes |
+| `GET` | `/api/diff/branches` | Compare two branches (`?from=<ref>&to=<ref>`) |
+| `GET` | `/api/diff/commits` | Get diff for specific commits (`?commits=<sha1>,<sha2>`) |
+
+### Git
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/git/branches` | List all branches |
+| `GET` | `/api/git/commits` | List recent commits (`?limit=20`) |
 
 ### Health & Meta
 
@@ -425,7 +434,7 @@ Options:
    - API documentation (auto-generated OpenAPI)
    - Contributing guide
 
-### Phase 8: Mobile & Enhanced File Support
+### Phase 8: Mobile & Enhanced File Support ✅
 
 **Goal**: Responsive design and rich file viewing
 
@@ -455,6 +464,43 @@ Options:
    - Render markdown using a lightweight parser
    - Support GitHub-flavored markdown (tables, task lists, code blocks)
    - Comments visible in both raw and preview modes
+
+### Phase 9: Streamlined Workflow & Branch Reviews
+
+**Goal**: Simplify review creation and support branch/commit reviews
+
+1. Streamlined review creation
+   - Remove title and description fields from reviews (auto-generate title from first file or timestamp)
+   - When viewing staged changes, enable commenting immediately
+   - Auto-create review on first comment (lazy creation)
+   - If staged changes exist, always show them on homepage with "Start Review" prompt
+   - Single-click flow: view changes → comment → review is created
+
+2. Review deletion from UI
+   - Add delete button to review list items
+   - Add delete confirmation modal
+   - Bulk delete option for multiple reviews
+
+3. Branch comparison mode
+   - New "Compare Branches" option in UI
+   - Select source and target branches from dropdown
+   - API endpoint: `GET /api/diff/branches?from=<ref>&to=<ref>`
+   - Show diff between any two refs (branches, tags, commits)
+   - Create review from branch comparison
+
+4. Commit range reviews
+   - "Select Commits" picker in UI
+   - Show recent commit history with checkboxes
+   - Select single commit or range of commits
+   - API endpoint: `GET /api/diff/commits?commits=<sha1>,<sha2>,...`
+   - API endpoint: `GET /api/git/commits?limit=20` for commit history
+   - Create review from selected commits
+
+5. Database schema changes
+   - Remove `title` and `description` columns from reviews table
+   - Add `source_type` column: 'staged' | 'branch' | 'commits'
+   - Add `source_ref` column for branch name or commit SHAs
+   - Migration to handle existing data
 
 ---
 
@@ -721,8 +767,6 @@ export default defineConfig({
 
 ## Future Considerations (Out of Scope for MVP)
 
-- Branch-to-branch comparison mode
-- Commit range comparison
 - AI-assisted review suggestions
 - Team collaboration (multi-user)
 - GitHub/GitLab integration for pushing reviews
