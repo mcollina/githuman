@@ -151,7 +151,7 @@ export function ReviewPage() {
 
   return (
     <CommentProvider reviewId={id!}>
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-w-0">
         <Sidebar
           files={data.files}
           selectedFile={selectedFile}
@@ -162,15 +162,15 @@ export function ReviewPage() {
           }}
           selectedIndex={selectedFileIndex}
         />
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 border-b border-gray-200 bg-white">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">{data.title}</h1>
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="p-3 sm:p-4 border-b border-gray-200 bg-white">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{data.title}</h1>
                 {data.description && (
-                  <p className="mt-1 text-sm text-gray-500">{data.description}</p>
+                  <p className="mt-1 text-sm text-gray-500 line-clamp-2">{data.description}</p>
                 )}
-                <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
                   <span>Created {formatDate(data.createdAt)}</span>
                   {data.baseRef && (
                     <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
@@ -182,13 +182,13 @@ export function ReviewPage() {
                   <CommentStats reviewId={id!} />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <select
                   value={data.status}
                   onChange={(e) => handleStatusChange(e.target.value as ReviewStatus)}
                   disabled={updating}
                   className={cn(
-                    'px-3 py-1.5 text-sm font-medium rounded-lg border-0 cursor-pointer',
+                    'px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border-0 cursor-pointer',
                     currentStatus?.color
                   )}
                 >
@@ -200,7 +200,7 @@ export function ReviewPage() {
                 </select>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
+                  className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
                 >
                   Delete
                 </button>

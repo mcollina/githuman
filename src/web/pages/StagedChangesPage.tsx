@@ -66,7 +66,7 @@ export function StagedChangesPage() {
 
   return (
     <>
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-w-0">
         {data && (
           <>
             <Sidebar
@@ -74,20 +74,21 @@ export function StagedChangesPage() {
               selectedFile={selectedFile}
               onFileSelect={setSelectedFile}
             />
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0">
               {hasChanges && (
-                <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
+                <div className="p-3 sm:p-4 border-b border-gray-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="text-xs sm:text-sm text-gray-600">
                     Review your staged changes before creating a review
                   </div>
                   <button
                     onClick={() => setShowModal(true)}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                    className="inline-flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 shrink-0"
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Create Review
+                    <span className="hidden sm:inline">Create Review</span>
+                    <span className="sm:hidden">Create</span>
                   </button>
                 </div>
               )}

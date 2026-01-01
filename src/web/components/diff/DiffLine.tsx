@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { useCommentContext, getLineKey } from '../../contexts/CommentContext';
 import { LineComment } from './LineComment';
@@ -13,7 +12,6 @@ interface DiffLineProps {
 }
 
 export function DiffLine({ line, filePath, showLineNumbers = true, allowComments = false }: DiffLineProps) {
-  const [hovered, setHovered] = useState(false);
   const commentContext = allowComments ? useCommentContext() : null;
 
   const lineKey = getLineKey(filePath, line.newLineNumber ?? line.oldLineNumber, line.type);
@@ -38,7 +36,8 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
     context: ' ',
   }[line.type];
 
-  const handleAddComment = () => {
+  const handleLineClick = () => {
+    if (!allowComments || isAddingComment) return;
     commentContext?.setActiveCommentLine(lineKey);
   };
 
@@ -59,9 +58,15 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
   return (
     <div>
       <div
-        className={cn('flex font-mono text-sm group relative', bgClass)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        className={cn(
+          'flex font-mono text-sm group relative',
+          bgClass,
+          allowComments && !isAddingComment && 'cursor-pointer hover:bg-blue-50/50'
+        )}
+        onClick={handleLineClick}
+        role={allowComments ? 'button' : undefined}
+        tabIndex={allowComments ? 0 : undefined}
+        onKeyDown={allowComments ? (e) => e.key === 'Enter' && handleLineClick() : undefined}
       >
         {showLineNumbers && (
           <>
@@ -76,25 +81,12 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
         <span className={cn('w-5 px-1 py-0.5 text-center select-none shrink-0', textClass)}>
           {prefix}
         </span>
-        <pre className={cn('flex-1 py-0.5 pr-4 overflow-x-auto', textClass)}>
+        <pre className={cn('flex-1 py-0.5 pr-4 whitespace-pre', textClass)}>
           <code>{line.content || ' '}</code>
         </pre>
 
-        {/* Add comment button */}
-        {allowComments && hovered && !isAddingComment && (
-          <button
-            onClick={handleAddComment}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Add comment"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        )}
-
         {/* Comment count badge */}
-        {lineComments.length > 0 && !hovered && (
+        {lineComments.length > 0 && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
             {lineComments.length}
           </span>

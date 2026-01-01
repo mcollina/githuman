@@ -8,7 +8,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import authPlugin from './plugins/auth.ts';
-import diffRoutes from './routes/diff.ts';
+import diffRoutes, { imageRoute } from './routes/diff.ts';
 import reviewRoutes from './routes/reviews.ts';
 import commentRoutes from './routes/comments.ts';
 import type { ServerConfig } from './config.ts';
@@ -52,6 +52,7 @@ export async function buildApp(
 
   // Register routes
   await app.register(diffRoutes);
+  await app.register(imageRoute);
   await app.register(reviewRoutes);
   await app.register(commentRoutes);
 

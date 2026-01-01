@@ -33,6 +33,7 @@ export function LineComment({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [showActions, setShowActions] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSaveEdit = () => {
     if (editContent.trim() && onEdit) {
@@ -46,17 +47,33 @@ export function LineComment({
     setIsEditing(false);
   };
 
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete?.(comment.id);
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+      setDeleting(false);
+    }
+  };
+
+  const toggleActions = () => {
+    setShowActions(!showActions);
+  };
+
   return (
     <div
       className={cn(
-        'ml-[6.25rem] mr-4 my-2 bg-white border rounded-lg shadow-sm',
+        'mx-2 sm:ml-[6.25rem] sm:mr-4 my-2 bg-white border rounded-lg shadow-sm',
         comment.resolved ? 'border-gray-200 opacity-60' : 'border-blue-200'
       )}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-        <div className="flex items-center gap-2">
+      <div
+        className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200 rounded-t-lg cursor-pointer"
+        onClick={toggleActions}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500">{formatDate(comment.createdAt)}</span>
           {comment.resolved && (
             <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">
@@ -69,38 +86,67 @@ export function LineComment({
             </span>
           )}
         </div>
-        {showActions && (
-          <div className="flex items-center gap-1">
-            {comment.resolved ? (
-              <button
-                onClick={() => onUnresolve?.(comment.id)}
-                className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
-              >
-                Unresolve
-              </button>
-            ) : (
-              <button
-                onClick={() => onResolve?.(comment.id)}
-                className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
-              >
-                Resolve
-              </button>
-            )}
+        <svg
+          className={cn('w-4 h-4 text-gray-400 transition-transform', showActions && 'rotate-180')}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
+      {/* Actions bar - shown on toggle */}
+      {showActions && (
+        <div className="flex items-center gap-1 px-3 py-2 bg-gray-100 border-b border-gray-200">
+          {comment.resolved ? (
             <button
-              onClick={() => setIsEditing(true)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUnresolve?.(comment.id);
+              }}
               className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
             >
-              Edit
+              Unresolve
             </button>
+          ) : (
             <button
-              onClick={() => onDelete?.(comment.id)}
-              className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResolve?.(comment.id);
+              }}
+              className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
             >
-              Delete
+              Resolve
             </button>
-          </div>
-        )}
-      </div>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+              setShowActions(false);
+            }}
+            className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            disabled={deleting}
+            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      )}
+
       <div className="p-3">
         {isEditing ? (
           <div className="space-y-2">
@@ -113,12 +159,14 @@ export function LineComment({
             />
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={handleCancelEdit}
                 className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleSaveEdit}
                 className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
               >
@@ -128,11 +176,11 @@ export function LineComment({
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
             {comment.suggestion && (
-              <div className="mt-3 p-3 bg-gray-900 rounded-lg">
+              <div className="mt-3 p-3 bg-gray-900 rounded-lg overflow-x-auto">
                 <div className="text-xs text-gray-400 mb-2">Suggested change:</div>
-                <pre className="text-sm text-green-400 font-mono overflow-x-auto">
+                <pre className="text-sm text-green-400 font-mono">
                   <code>{comment.suggestion}</code>
                 </pre>
               </div>

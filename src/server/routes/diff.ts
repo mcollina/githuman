@@ -147,6 +147,119 @@ const diffRoutes: FastifyPluginAsync = async (fastify) => {
       return gitService.getRepositoryInfo();
     }
   );
+
+  /**
+   * GET /api/diff/file/:path
+   * Returns the full content of a staged file
+   * Query params:
+   *   - version: 'staged' (default) or 'head'
+   */
+  fastify.get<{
+    Params: { '*': string };
+    Querystring: { version?: 'staged' | 'head' };
+    Reply: FileContentResponse | { error: string };
+  }>(
+    '/api/diff/file/*',
+    async (request, reply) => {
+      const filePath = request.params['*'];
+      const version = request.query.version ?? 'staged';
+
+      if (!filePath) {
+        return reply.code(400).send({ error: 'File path is required' });
+      }
+
+      const gitService = new GitService(fastify.config.repositoryPath);
+
+      if (!(await gitService.isRepo())) {
+        return reply.code(400).send({ error: 'Not a git repository' });
+      }
+
+      const content =
+        version === 'head'
+          ? await gitService.getHeadFileContent(filePath)
+          : await gitService.getStagedFileContent(filePath);
+
+      if (content === null) {
+        return reply.code(404).send({ error: 'File not found' });
+      }
+
+      const lines = content.split('\n');
+
+      return {
+        path: filePath,
+        version,
+        content,
+        lines,
+        lineCount: lines.length,
+      };
+    }
+  );
 };
 
+interface FileContentResponse {
+  path: string;
+  version: 'staged' | 'head';
+  content: string;
+  lines: string[];
+  lineCount: number;
+}
+
+// Helper to get MIME type from file extension
+function getMimeType(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  const mimeTypes: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+    webp: 'image/webp',
+    ico: 'image/x-icon',
+    bmp: 'image/bmp',
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+}
+
+/**
+ * GET /api/diff/image/:path
+ * Returns the raw image content from git
+ * Query params:
+ *   - version: 'staged' (default) or 'head'
+ */
+const imageRoute: FastifyPluginAsync = async (fastify) => {
+  fastify.get<{
+    Params: { '*': string };
+    Querystring: { version?: 'staged' | 'head' };
+  }>(
+    '/api/diff/image/*',
+    async (request, reply) => {
+      const filePath = request.params['*'];
+      const version = request.query.version ?? 'staged';
+
+      if (!filePath) {
+        return reply.code(400).send({ error: 'File path is required' });
+      }
+
+      const gitService = new GitService(fastify.config.repositoryPath);
+
+      if (!(await gitService.isRepo())) {
+        return reply.code(400).send({ error: 'Not a git repository' });
+      }
+
+      const content =
+        version === 'head'
+          ? await gitService.getHeadBinaryContent(filePath)
+          : await gitService.getStagedBinaryContent(filePath);
+
+      if (content === null) {
+        return reply.code(404).send({ error: 'Image not found' });
+      }
+
+      const mimeType = getMimeType(filePath);
+      return reply.header('Content-Type', mimeType).send(content);
+    }
+  );
+};
+
+export { imageRoute };
 export default diffRoutes;

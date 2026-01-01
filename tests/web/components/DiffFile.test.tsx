@@ -66,12 +66,14 @@ describe('DiffFile', () => {
     // Initially collapsed
     expect(screen.queryByText('line 1')).toBeNull();
 
-    // Click to expand
-    fireEvent.click(screen.getByRole('button'));
+    // Click to expand - use getAllByRole to handle multiple buttons
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[0]); // First button is the expand/collapse button
     expect(screen.getByText('line 1')).toBeDefined();
 
-    // Click to collapse
-    fireEvent.click(screen.getByRole('button'));
+    // Click to collapse - need to get buttons again as DOM may have changed
+    const expandedButtons = screen.getAllByRole('button');
+    fireEvent.click(expandedButtons[0]);
     expect(screen.queryByText('line 1')).toBeNull();
   });
 

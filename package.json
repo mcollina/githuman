@@ -44,6 +44,7 @@
     "open": "^10.0.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.11.0",
     "shiki": "^1.0.0",
     "simple-git": "^3.25.0",

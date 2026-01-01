@@ -39,7 +39,7 @@ export function DiffView({ files, summary, selectedFile, allowComments = false }
     : files;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4">
+    <div className="flex-1 overflow-y-auto p-4 min-w-0">
       {summary && (
         <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
           <div className="flex items-center gap-6 text-sm">

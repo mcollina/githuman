@@ -425,6 +425,37 @@ Options:
    - API documentation (auto-generated OpenAPI)
    - Contributing guide
 
+### Phase 8: Mobile & Enhanced File Support
+
+**Goal**: Responsive design and rich file viewing
+
+1. Responsive sidebar
+   - Auto-collapse sidebar on mobile breakpoints (< 768px)
+   - Hamburger menu toggle for mobile
+   - Slide-out drawer animation
+   - Persist sidebar state preference
+
+2. Full file view with commenting
+   - Add "View Full File" toggle in file header
+   - Fetch complete file content from git (not just diff hunks)
+   - Allow comments on any line, not just changed lines
+   - Visual distinction between changed and unchanged regions
+   - API endpoint: `GET /api/reviews/:id/files/:path` for full file content
+
+3. Image file support
+   - Detect image files by extension (.png, .jpg, .gif, .svg, .webp)
+   - Side-by-side image comparison for modified images
+   - Display added/deleted images appropriately
+   - Show image dimensions and file size
+   - Support for image diffing (optional: highlight changes)
+
+4. Markdown file preview
+   - Detect markdown files (.md, .mdx)
+   - Toggle between raw diff and rendered preview
+   - Render markdown using a lightweight parser
+   - Support GitHub-flavored markdown (tables, task lists, code blocks)
+   - Comments visible in both raw and preview modes
+
 ---
 
 ## Key Technical Decisions

@@ -179,6 +179,66 @@ export class GitService {
     const sha = await this.git.revparse(['HEAD']);
     return sha.trim();
   }
+
+  /**
+   * Get file content from the staged version (index)
+   */
+  async getStagedFileContent(filePath: string): Promise<string | null> {
+    try {
+      const content = await this.git.show([`:${filePath}`]);
+      return content;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get file content from HEAD
+   */
+  async getHeadFileContent(filePath: string): Promise<string | null> {
+    try {
+      const content = await this.git.show([`HEAD:${filePath}`]);
+      return content;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get file content from a specific commit/ref
+   */
+  async getFileContentAtRef(filePath: string, ref: string): Promise<string | null> {
+    try {
+      const content = await this.git.show([`${ref}:${filePath}`]);
+      return content;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get binary file content from the staged version (index) as base64
+   */
+  async getStagedBinaryContent(filePath: string): Promise<Buffer | null> {
+    try {
+      const result = await this.git.raw(['show', `:${filePath}`]);
+      return Buffer.from(result, 'binary');
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get binary file content from HEAD as base64
+   */
+  async getHeadBinaryContent(filePath: string): Promise<Buffer | null> {
+    try {
+      const result = await this.git.raw(['show', `HEAD:${filePath}`]);
+      return Buffer.from(result, 'binary');
+    } catch {
+      return null;
+    }
+  }
 }
 
 export interface StagedFile {
