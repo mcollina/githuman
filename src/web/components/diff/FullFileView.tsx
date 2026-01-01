@@ -71,7 +71,7 @@ export function FullFileView({ filePath, hunks, allowComments = false, onLineCli
   }
 
   return (
-    <div className="font-mono text-sm">
+    <div className="font-mono text-sm min-w-max">
       {fileContent.lines.map((lineContent, index) => {
         const lineNumber = index + 1;
         const changeInfo = changedLines.get(lineNumber);
