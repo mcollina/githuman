@@ -35,6 +35,7 @@ export interface Todo {
   content: string;
   completed: boolean;
   reviewId: string | null; // null for global todos
+  position: number;
   createdAt: string;
   updatedAt: string;
 }

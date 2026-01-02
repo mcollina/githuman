@@ -48,4 +48,10 @@ export const todosApi = {
 
   clearCompleted: () =>
     api.delete<{ deleted: number }>('/todos/completed'),
+
+  reorder: (orderedIds: string[]) =>
+    api.post<{ updated: number }>('/todos/reorder', { orderedIds }),
+
+  move: (id: string, position: number) =>
+    api.post<Todo>(`/todos/${id}/move`, { position }),
 };

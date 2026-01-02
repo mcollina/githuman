@@ -104,6 +104,20 @@ export const migrations: Migration[] = [
       CREATE INDEX idx_todos_completed ON todos(completed);
     `,
   },
+  {
+    version: 5,
+    name: 'add_todo_position',
+    up: `
+      ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0;
+      CREATE INDEX idx_todos_position ON todos(position);
+
+      -- Initialize positions based on creation order
+      UPDATE todos SET position = (
+        SELECT COUNT(*) FROM todos t2
+        WHERE t2.created_at <= todos.created_at AND t2.id != todos.id
+      );
+    `,
+  },
 ];
 
 function getCurrentVersion(db: DatabaseSync): number {

@@ -312,4 +312,66 @@ describe('todo routes', () => {
       assert.strictEqual(todoRepo.findAll().length, 1);
     });
   });
+
+  describe('POST /api/todos/reorder', () => {
+    it('should reorder todos by IDs', async () => {
+      const db = getDatabase();
+      const todoRepo = new TodoRepository(db);
+      todoRepo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      todoRepo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      todoRepo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/todos/reorder',
+        payload: { orderedIds: ['todo-3', 'todo-1', 'todo-2'] },
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      const data = JSON.parse(response.payload);
+      assert.strictEqual(data.updated, 3);
+
+      // Verify the new order
+      const todos = todoRepo.findAll();
+      assert.strictEqual(todos[0].id, 'todo-3');
+      assert.strictEqual(todos[1].id, 'todo-1');
+      assert.strictEqual(todos[2].id, 'todo-2');
+    });
+  });
+
+  describe('POST /api/todos/:id/move', () => {
+    it('should move a todo to a new position', async () => {
+      const db = getDatabase();
+      const todoRepo = new TodoRepository(db);
+      todoRepo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      todoRepo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      todoRepo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/todos/todo-3/move',
+        payload: { position: 0 },
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      const data = JSON.parse(response.payload);
+      assert.strictEqual(data.id, 'todo-3');
+
+      // Verify the new order
+      const todos = todoRepo.findAll();
+      assert.strictEqual(todos[0].id, 'todo-3');
+      assert.strictEqual(todos[1].id, 'todo-1');
+      assert.strictEqual(todos[2].id, 'todo-2');
+    });
+
+    it('should return 404 for non-existent todo', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/todos/non-existent/move',
+        payload: { position: 0 },
+      });
+
+      assert.strictEqual(response.statusCode, 404);
+    });
+  });
 });

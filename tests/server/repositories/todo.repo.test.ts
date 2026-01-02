@@ -392,4 +392,106 @@ describe('TodoRepository', () => {
       assert.strictEqual(repo.findAll().length, 0);
     });
   });
+
+  describe('position', () => {
+    it('should assign incremental positions to new todos', () => {
+      repo.create({
+        id: 'todo-1',
+        content: 'First',
+        completed: false,
+        reviewId: null,
+      });
+      repo.create({
+        id: 'todo-2',
+        content: 'Second',
+        completed: false,
+        reviewId: null,
+      });
+      repo.create({
+        id: 'todo-3',
+        content: 'Third',
+        completed: false,
+        reviewId: null,
+      });
+
+      const todo1 = repo.findById('todo-1');
+      const todo2 = repo.findById('todo-2');
+      const todo3 = repo.findById('todo-3');
+
+      assert.strictEqual(todo1?.position, 0);
+      assert.strictEqual(todo2?.position, 1);
+      assert.strictEqual(todo3?.position, 2);
+    });
+
+    it('should return todos ordered by position', () => {
+      repo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      repo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      repo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      const todos = repo.findAll();
+      assert.strictEqual(todos[0].content, 'First');
+      assert.strictEqual(todos[1].content, 'Second');
+      assert.strictEqual(todos[2].content, 'Third');
+    });
+  });
+
+  describe('reorder', () => {
+    it('should reorder todos by updating positions', () => {
+      repo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      repo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      repo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      // Reorder: Third, First, Second
+      const updated = repo.reorder(['todo-3', 'todo-1', 'todo-2']);
+      assert.strictEqual(updated, 3);
+
+      const todos = repo.findAll();
+      assert.strictEqual(todos[0].id, 'todo-3');
+      assert.strictEqual(todos[1].id, 'todo-1');
+      assert.strictEqual(todos[2].id, 'todo-2');
+    });
+
+    it('should return 0 when no IDs match', () => {
+      const updated = repo.reorder(['non-existent']);
+      assert.strictEqual(updated, 0);
+    });
+  });
+
+  describe('move', () => {
+    it('should move a todo to a new position', () => {
+      repo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      repo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      repo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      // Move Third to position 0 (top)
+      const moved = repo.move('todo-3', 0);
+      assert.ok(moved);
+      assert.strictEqual(moved.id, 'todo-3');
+
+      const todos = repo.findAll();
+      assert.strictEqual(todos[0].id, 'todo-3');
+      assert.strictEqual(todos[1].id, 'todo-1');
+      assert.strictEqual(todos[2].id, 'todo-2');
+    });
+
+    it('should move a todo to the end', () => {
+      repo.create({ id: 'todo-1', content: 'First', completed: false, reviewId: null });
+      repo.create({ id: 'todo-2', content: 'Second', completed: false, reviewId: null });
+      repo.create({ id: 'todo-3', content: 'Third', completed: false, reviewId: null });
+
+      // Move First to position 2 (end)
+      const moved = repo.move('todo-1', 2);
+      assert.ok(moved);
+
+      const todos = repo.findAll();
+      assert.strictEqual(todos[0].id, 'todo-2');
+      assert.strictEqual(todos[1].id, 'todo-3');
+      assert.strictEqual(todos[2].id, 'todo-1');
+    });
+
+    it('should return null for non-existent todo', () => {
+      const moved = repo.move('non-existent', 0);
+      assert.strictEqual(moved, null);
+    });
+  });
 });

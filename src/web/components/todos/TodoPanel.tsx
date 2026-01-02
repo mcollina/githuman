@@ -1,7 +1,7 @@
 /**
  * Todo panel component - main container for todo list
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, type DragEvent, type TouchEvent } from 'react';
 import { cn } from '../../lib/utils';
 import { TodoItem } from './TodoItem';
 import { TodoInput } from './TodoInput';
@@ -12,6 +12,7 @@ import {
   useToggleTodo,
   useDeleteTodo,
   useClearCompleted,
+  useReorderTodos,
 } from '../../hooks/useTodos';
 
 type FilterState = 'all' | 'pending' | 'completed';
@@ -23,6 +24,10 @@ interface TodoPanelProps {
 
 export function TodoPanel({ reviewId, className }: TodoPanelProps) {
   const [filter, setFilter] = useState<FilterState>('all');
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const touchStartY = useRef<number>(0);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const filters = filter === 'all'
     ? { reviewId }
@@ -34,8 +39,9 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
   const { toggle, loading: toggling } = useToggleTodo();
   const { deleteTodo, loading: deleting } = useDeleteTodo();
   const { clearCompleted, loading: clearing } = useClearCompleted();
+  const { reorder, loading: reordering } = useReorderTodos();
 
-  const isDisabled = creating || toggling || deleting || clearing;
+  const isDisabled = creating || toggling || deleting || clearing || reordering;
 
   const handleAdd = useCallback(async (content: string) => {
     await create({ content, reviewId });
@@ -60,6 +66,112 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
     refetch();
     refetchStats();
   }, [clearCompleted, refetch, refetchStats]);
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: DragEvent<HTMLDivElement>, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>, id: string) => {
+    e.preventDefault();
+    if (id !== draggedId) {
+      setDragOverId(id);
+    }
+  }, [draggedId]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setDragOverId(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: DragEvent<HTMLDivElement>, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) {
+      handleDragEnd();
+      return;
+    }
+
+    // Get the full list of todos (we need all todos for proper reordering)
+    const currentOrder = todos.map((t) => t.id);
+    const draggedIndex = currentOrder.indexOf(draggedId);
+    const targetIndex = currentOrder.indexOf(targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      handleDragEnd();
+      return;
+    }
+
+    // Create new order
+    const newOrder = [...currentOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedId);
+
+    handleDragEnd();
+    await reorder(newOrder);
+    refetch();
+  }, [draggedId, todos, reorder, refetch, handleDragEnd]);
+
+  // Touch event handlers for mobile
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>, id: string) => {
+    touchStartY.current = e.touches[0].clientY;
+    setDraggedId(id);
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    if (!draggedId || !listRef.current) return;
+
+    const touch = e.touches[0];
+    const elements = listRef.current.querySelectorAll('[data-todo-id]');
+
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+      const todoId = el.getAttribute('data-todo-id');
+
+      if (
+        todoId &&
+        todoId !== draggedId &&
+        touch.clientY >= rect.top &&
+        touch.clientY <= rect.bottom
+      ) {
+        setDragOverId(todoId);
+        return;
+      }
+    }
+    setDragOverId(null);
+  }, [draggedId]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!draggedId || !dragOverId || draggedId === dragOverId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const currentOrder = todos.map((t) => t.id);
+    const draggedIndex = currentOrder.indexOf(draggedId);
+    const targetIndex = currentOrder.indexOf(dragOverId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const newOrder = [...currentOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedId);
+
+    setDraggedId(null);
+    setDragOverId(null);
+    await reorder(newOrder);
+    refetch();
+  }, [draggedId, dragOverId, todos, reorder, refetch]);
 
   const filterButtons: { value: FilterState; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -119,7 +231,7 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
       </div>
 
       {/* Todo list */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2" ref={listRef}>
         {loading ? (
           <p className="text-sm text-gray-500 px-2">Loading...</p>
         ) : todos.length === 0 ? (
@@ -135,6 +247,17 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
                 onToggle={handleToggle}
                 onDelete={handleDelete}
                 disabled={isDisabled}
+                draggable
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
+                isDragOver={dragOverId === todo.id}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                isDragging={draggedId === todo.id}
               />
             ))}
           </div>

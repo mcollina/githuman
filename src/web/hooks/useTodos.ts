@@ -208,3 +208,31 @@ export function useClearCompleted(): UseClearCompletedResult {
 
   return { clearCompleted, loading, error };
 }
+
+interface UseReorderTodosResult {
+  reorder: (orderedIds: string[]) => Promise<number>;
+  loading: boolean;
+  error: ApiClientError | null;
+}
+
+export function useReorderTodos(): UseReorderTodosResult {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<ApiClientError | null>(null);
+
+  const reorder = async (orderedIds: string[]): Promise<number> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await todosApi.reorder(orderedIds);
+      return result.updated;
+    } catch (err) {
+      const apiError = err instanceof ApiClientError ? err : new ApiClientError('Unknown error', 500);
+      setError(apiError);
+      throw apiError;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { reorder, loading, error };
+}

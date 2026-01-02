@@ -18,6 +18,7 @@ Subcommands:
   list                   List todos (defaults to pending only)
   done <id>              Mark todo as completed
   undone <id>            Mark todo as not completed
+  move <id> <position>   Move todo to a new position (0-indexed)
   remove <id>            Delete a todo
   clear                  Remove todos (use with --done to clear completed)
 
@@ -34,6 +35,7 @@ Examples:
   code-review todo list --done             # Shows completed todos
   code-review todo list --all              # Shows all todos
   code-review todo done abc123
+  code-review todo move abc123 0           # Move to top
   code-review todo clear --done
 `);
 }
@@ -173,6 +175,36 @@ export async function todoCommand(args: string[]) {
           console.log(JSON.stringify(updated, null, 2));
         } else {
           console.log(`Marked as pending: ${todo.content}`);
+        }
+        break;
+      }
+
+      case 'move': {
+        const id = positionals[1];
+        const posStr = positionals[2];
+        if (!id || posStr === undefined) {
+          console.error('Error: Todo ID and position are required');
+          console.error('Usage: code-review todo move <id> <position>');
+          process.exit(1);
+        }
+
+        const position = parseInt(posStr, 10);
+        if (Number.isNaN(position) || position < 0) {
+          console.error('Error: Position must be a non-negative integer');
+          process.exit(1);
+        }
+
+        const todo = findTodoByPrefix(repo, id);
+        if (!todo) {
+          console.error(`Error: Todo not found: ${id}`);
+          process.exit(1);
+        }
+
+        const moved = repo.move(todo.id, position);
+        if (values.json) {
+          console.log(JSON.stringify(moved, null, 2));
+        } else {
+          console.log(`Moved "${todo.content}" to position ${position}`);
         }
         break;
       }

@@ -183,6 +183,42 @@ const todoRoutes: FastifyPluginAsync = async (fastify) => {
     const count = repo.deleteCompleted();
     return { deleted: count };
   });
+
+  /**
+   * POST /api/todos/reorder
+   * Reorder todos by providing an array of IDs in the desired order
+   */
+  fastify.post<{
+    Body: { orderedIds: string[] };
+    Reply: { updated: number };
+  }>('/api/todos/reorder', async (request) => {
+    const repo = getRepo();
+    const { orderedIds } = request.body;
+    const updated = repo.reorder(orderedIds);
+    return { updated };
+  });
+
+  /**
+   * POST /api/todos/:id/move
+   * Move a single todo to a new position
+   */
+  fastify.post<{
+    Params: TodoParams;
+    Body: { position: number };
+    Reply: Todo | { error: string };
+  }>('/api/todos/:id/move', async (request, reply) => {
+    const repo = getRepo();
+    const { position } = request.body;
+    const todo = repo.move(request.params.id, position);
+
+    if (!todo) {
+      return reply.code(404).send({
+        error: 'Todo not found',
+      });
+    }
+
+    return todo;
+  });
 };
 
 export default todoRoutes;
