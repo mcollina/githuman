@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "./dist"
+  },
+  "include": ["src/cli/**/*", "src/server/**/*", "src/shared/**/*"],
+  "exclude": ["node_modules", "dist", "src/web"]
+}

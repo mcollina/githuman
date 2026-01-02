@@ -1,0 +1,30 @@
+# Development files
+.claude/
+.code-review/
+experiments/
+scripts/
+tests/
+docs/
+
+# Config files
+.gitignore
+.editorconfig
+playwright.config.ts
+vitest.config.ts
+tsconfig.web.json
+vite.config.ts
+postcss.config.js
+tailwind.config.js
+
+# Development docs
+plan.md
+CONTRIBUTING.md
+
+# Source maps and temp files
+*.map
+*.log
+*.tgz
+
+# Web source (use dist/web instead)
+src/web/
+index.html

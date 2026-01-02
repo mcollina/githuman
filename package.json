@@ -4,13 +4,19 @@
   "description": "Local CLI tool for code review with web interface",
   "type": "module",
   "bin": {
-    "code-review": "./src/cli/index.ts"
+    "code-review": "./dist/cli/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:server": "node --watch src/cli/index.ts serve --no-open",
-    "build": "vite build",
-    "start": "node src/cli/index.ts serve",
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:web": "vite build",
+    "start": "node dist/cli/index.js serve",
     "test": "npm run test:server && npm run test:cli && npm run test:web",
     "test:server": "node --test 'tests/server/**/*.test.ts'",
     "test:cli": "node --test 'tests/cli/**/*.test.ts'",
@@ -19,7 +25,8 @@
     "typecheck": "npm run typecheck:server && npm run typecheck:web",
     "typecheck:server": "tsc --noEmit",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "lint": "eslint src tests"
+    "lint": "eslint src tests",
+    "prepublishOnly": "npm run build && npm run typecheck && npm test"
   },
   "engines": {
     "node": ">=24.0.0"

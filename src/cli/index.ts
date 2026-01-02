@@ -6,15 +6,15 @@
 // Suppress SQLite experimental warning
 // Must be done before any imports that might load sqlite
 const originalEmitWarning = process.emitWarning;
-process.emitWarning = (warning, ...args) => {
+process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
   if (typeof warning === 'string' && warning.includes('SQLite')) {
     return;
   }
   if (warning instanceof Error && warning.message.includes('SQLite')) {
     return;
   }
-  return originalEmitWarning.call(process, warning, ...args);
-};
+  return (originalEmitWarning as Function).call(process, warning, ...args);
+}) as typeof process.emitWarning;
 
 // Use dynamic imports so warning suppression is in place first
 const { parseArgs } = await import('node:util');
