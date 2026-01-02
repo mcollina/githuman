@@ -23,12 +23,28 @@ export interface AppOptions {
   serveStatic?: boolean;
 }
 
+function getLoggerConfig(enabled: boolean) {
+  if (!enabled) return false;
+
+  // Use one-line-logger for pretty output when running in a TTY
+  if (process.stdout.isTTY) {
+    return {
+      transport: {
+        target: '@fastify/one-line-logger',
+      },
+    };
+  }
+
+  // Default JSON logging for non-TTY (e.g., piped output, log files)
+  return true;
+}
+
 export async function buildApp(
   config: ServerConfig,
   options: AppOptions = {}
 ): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: options.logger ?? true,
+    logger: getLoggerConfig(options.logger ?? true),
   });
 
   // Register CORS for development
