@@ -1,5 +1,9 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { execSync } from 'node:child_process';
 import { buildApp } from '../../../src/server/app.ts';
 import { createConfig } from '../../../src/server/config.ts';
 import type { FastifyInstance } from 'fastify';
@@ -34,6 +38,8 @@ describe('diff routes', () => {
       assert.ok(body.path);
       // remote might be null for repos without remotes
       assert.ok('remote' in body);
+      // hasCommits should be present
+      assert.strictEqual(typeof body.hasCommits, 'boolean');
     });
 
     it('should return the correct repository name', async () => {
@@ -144,6 +150,50 @@ describe('diff routes', () => {
       assert.strictEqual(response.statusCode, 400);
       const body = JSON.parse(response.body);
       assert.strictEqual(body.error, 'Not a git repository');
+    });
+  });
+
+  describe('with git repo without commits', () => {
+    let noCommitsApp: FastifyInstance;
+    let tempDir: string;
+
+    before(async () => {
+      // Create a temp directory and init git repo without commits
+      tempDir = mkdtempSync(join(tmpdir(), 'code-review-test-'));
+      execSync('git init', { cwd: tempDir, stdio: 'ignore' });
+
+      const config = createConfig({
+        repositoryPath: tempDir,
+      });
+      noCommitsApp = await buildApp(config, { logger: false });
+    });
+
+    after(async () => {
+      await noCommitsApp.close();
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('should return hasCommits: false for /api/info', async () => {
+      const response = await noCommitsApp.inject({
+        method: 'GET',
+        url: '/api/info',
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      const body = JSON.parse(response.body);
+      assert.strictEqual(body.hasCommits, false);
+    });
+
+    it('should return NO_COMMITS error for /api/diff/staged', async () => {
+      const response = await noCommitsApp.inject({
+        method: 'GET',
+        url: '/api/diff/staged',
+      });
+
+      assert.strictEqual(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.strictEqual(body.code, 'NO_COMMITS');
+      assert.ok(body.error.includes('no commits'));
     });
   });
 });

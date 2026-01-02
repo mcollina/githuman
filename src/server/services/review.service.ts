@@ -46,6 +46,12 @@ export class ReviewService {
       throw new ReviewError('Not a git repository', 'NOT_GIT_REPO');
     }
 
+    // Verify the repo has at least one commit
+    const hasCommits = await this.git.hasCommits();
+    if (!hasCommits) {
+      throw new ReviewError('Repository has no commits yet. Create an initial commit first.', 'NO_COMMITS');
+    }
+
     const sourceType = request.sourceType || 'staged';
     const sourceRef = request.sourceRef || null;
 

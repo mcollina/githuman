@@ -36,7 +36,7 @@ const diffRoutes: FastifyPluginAsync = async (fastify) => {
    * GET /api/diff/staged
    * Returns parsed diff data for all staged changes
    */
-  fastify.get<{ Reply: StagedDiffResponse | { error: string } }>(
+  fastify.get<{ Reply: StagedDiffResponse | { error: string; code?: string } }>(
     '/api/diff/staged',
     async (request, reply) => {
       const gitService = new GitService(fastify.config.repositoryPath);
@@ -45,6 +45,15 @@ const diffRoutes: FastifyPluginAsync = async (fastify) => {
       if (!(await gitService.isRepo())) {
         return reply.code(400).send({
           error: 'Not a git repository',
+          code: 'NOT_GIT_REPO',
+        });
+      }
+
+      // Check if the repository has any commits
+      if (!(await gitService.hasCommits())) {
+        return reply.code(400).send({
+          error: 'Repository has no commits yet. Create an initial commit first.',
+          code: 'NO_COMMITS',
         });
       }
 
@@ -132,7 +141,7 @@ const diffRoutes: FastifyPluginAsync = async (fastify) => {
    * GET /api/info
    * Returns repository information
    */
-  fastify.get<{ Reply: RepositoryInfo | { error: string } }>(
+  fastify.get<{ Reply: (RepositoryInfo & { hasCommits: boolean }) | { error: string; code?: string } }>(
     '/api/info',
     async (request, reply) => {
       const gitService = new GitService(fastify.config.repositoryPath);
@@ -141,10 +150,17 @@ const diffRoutes: FastifyPluginAsync = async (fastify) => {
       if (!(await gitService.isRepo())) {
         return reply.code(400).send({
           error: 'Not a git repository',
+          code: 'NOT_GIT_REPO',
         });
       }
 
-      return gitService.getRepositoryInfo();
+      const hasCommits = await gitService.hasCommits();
+      const repoInfo = await gitService.getRepositoryInfo();
+
+      return {
+        ...repoInfo,
+        hasCommits,
+      };
     }
   );
 

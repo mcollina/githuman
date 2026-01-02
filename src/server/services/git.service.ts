@@ -26,6 +26,18 @@ export class GitService {
   }
 
   /**
+   * Check if the repository has any commits
+   */
+  async hasCommits(): Promise<boolean> {
+    try {
+      await this.git.revparse(['HEAD']);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Get the repository root directory
    */
   async getRepoRoot(): Promise<string> {
@@ -49,18 +61,28 @@ export class GitService {
 
     return {
       name,
-      branch,
+      branch: branch ?? 'main',
       remote,
       path: root,
     };
   }
 
   /**
-   * Get current branch name
+   * Get current branch name (returns null for repos without commits)
    */
-  async getCurrentBranch(): Promise<string> {
-    const branch = await this.git.revparse(['--abbrev-ref', 'HEAD']);
-    return branch.trim();
+  async getCurrentBranch(): Promise<string | null> {
+    try {
+      const branch = await this.git.revparse(['--abbrev-ref', 'HEAD']);
+      return branch.trim();
+    } catch {
+      // No commits yet - try to get the default branch from config
+      try {
+        const defaultBranch = await this.git.raw(['config', '--get', 'init.defaultBranch']);
+        return defaultBranch.trim() || null;
+      } catch {
+        return null;
+      }
+    }
   }
 
   /**
@@ -173,11 +195,15 @@ export class GitService {
   }
 
   /**
-   * Get the current HEAD commit SHA
+   * Get the current HEAD commit SHA (returns null for repos without commits)
    */
-  async getHeadSha(): Promise<string> {
-    const sha = await this.git.revparse(['HEAD']);
-    return sha.trim();
+  async getHeadSha(): Promise<string | null> {
+    try {
+      const sha = await this.git.revparse(['HEAD']);
+      return sha.trim();
+    } catch {
+      return null;
+    }
   }
 
   /**

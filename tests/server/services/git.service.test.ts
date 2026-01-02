@@ -130,6 +130,19 @@ describe('git.service', () => {
     });
   });
 
+  describe('hasCommits', () => {
+    it('should return true for a repository with commits', async () => {
+      const result = await git.hasCommits();
+      assert.strictEqual(result, true);
+    });
+
+    it('should return false for a non-git directory', async () => {
+      const nonGit = new GitService('/tmp');
+      const result = await nonGit.hasCommits();
+      assert.strictEqual(result, false);
+    });
+  });
+
   describe('getCurrentBranch', () => {
     it('should return the current branch name', async () => {
       const branch = await git.getCurrentBranch();
