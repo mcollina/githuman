@@ -2,6 +2,7 @@
  * Fastify application factory
  */
 import Fastify, { type FastifyInstance } from 'fastify';
+import { fastifyRequestContext, requestContext } from '@fastify/request-context';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { existsSync } from 'node:fs';
@@ -45,6 +46,15 @@ export async function buildApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({
     logger: getLoggerConfig(options.logger ?? true),
+  });
+
+  // Register request context plugin
+  await app.register(fastifyRequestContext);
+
+  // Store request logger in context for access from services
+  app.addHook('onRequest', (request, _reply, done) => {
+    request.requestContext.set('log', request.log);
+    done();
   });
 
   // Register CORS for development
@@ -99,9 +109,19 @@ export async function buildApp(
   return app;
 }
 
+// Re-export requestContext for use in services
+export { requestContext };
+
 // Extend Fastify types
 declare module 'fastify' {
   interface FastifyInstance {
     config: ServerConfig;
+  }
+}
+
+// Extend request context types
+declare module '@fastify/request-context' {
+  interface RequestContextData {
+    log: import('fastify').FastifyBaseLogger;
   }
 }

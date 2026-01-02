@@ -2,6 +2,7 @@
  * Git service - handles all git operations
  */
 import { simpleGit, type SimpleGit } from 'simple-git';
+import { requestContext } from '../app.ts';
 import type { RepositoryInfo } from '../../shared/types.ts';
 
 export class GitService {
@@ -13,6 +14,11 @@ export class GitService {
     this.git = simpleGit(repoPath);
   }
 
+  /** Get the logger from request context */
+  private get log() {
+    return requestContext.get('log');
+  }
+
   /**
    * Check if the path is a valid git repository
    */
@@ -20,7 +26,8 @@ export class GitService {
     try {
       await this.git.revparse(['--git-dir']);
       return true;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'isRepo check failed');
       return false;
     }
   }
@@ -32,7 +39,8 @@ export class GitService {
     try {
       await this.git.revparse(['HEAD']);
       return true;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'hasCommits check failed');
       return false;
     }
   }
@@ -74,12 +82,14 @@ export class GitService {
     try {
       const branch = await this.git.revparse(['--abbrev-ref', 'HEAD']);
       return branch.trim();
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'getCurrentBranch revparse failed, trying config');
       // No commits yet - try to get the default branch from config
       try {
         const defaultBranch = await this.git.raw(['config', '--get', 'init.defaultBranch']);
         return defaultBranch.trim() || null;
-      } catch {
+      } catch (configErr) {
+        this.log?.debug({ err: configErr, repoPath: this.repoPath }, 'getCurrentBranch config fallback failed');
         return null;
       }
     }
@@ -135,7 +145,8 @@ export class GitService {
     try {
       const result = await this.git.diff(['--cached', '--name-only', '--', filePath]);
       return result.trim().length > 0;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'isFileStaged check failed');
       return false;
     }
   }
@@ -201,7 +212,8 @@ export class GitService {
     try {
       const sha = await this.git.revparse(['HEAD']);
       return sha.trim();
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'getHeadSha failed');
       return null;
     }
   }
@@ -213,7 +225,8 @@ export class GitService {
     try {
       const content = await this.git.show([`:${filePath}`]);
       return content;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getStagedFileContent failed');
       return null;
     }
   }
@@ -225,7 +238,8 @@ export class GitService {
     try {
       const content = await this.git.show([`HEAD:${filePath}`]);
       return content;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getHeadFileContent failed');
       return null;
     }
   }
@@ -237,7 +251,8 @@ export class GitService {
     try {
       const content = await this.git.show([`${ref}:${filePath}`]);
       return content;
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath, ref }, 'getFileContentAtRef failed');
       return null;
     }
   }
@@ -249,7 +264,8 @@ export class GitService {
     try {
       const result = await this.git.raw(['show', `:${filePath}`]);
       return Buffer.from(result, 'binary');
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getStagedBinaryContent failed');
       return null;
     }
   }
@@ -261,7 +277,8 @@ export class GitService {
     try {
       const result = await this.git.raw(['show', `HEAD:${filePath}`]);
       return Buffer.from(result, 'binary');
-    } catch {
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getHeadBinaryContent failed');
       return null;
     }
   }
