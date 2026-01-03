@@ -43,7 +43,7 @@ async function getHighlighterInstance(): Promise<Highlighter | null> {
       // Dynamic import to handle cases where shiki fails to load
       const { createHighlighter } = await import('shiki');
       return createHighlighter({
-        themes: ['github-light'],
+        themes: ['github-dark'],
         langs: preloadLanguages,
       });
     })();
@@ -104,7 +104,7 @@ export function HighlighterProvider({ children }: { children: ReactNode }) {
         try {
           const html = highlighter.codeToHtml(line, {
             lang,
-            theme: 'github-light',
+            theme: 'github-dark',
           });
           // Extract content from <pre><code>...</code></pre>
           const match = html.match(/<code[^>]*>([\s\S]*)<\/code>/);

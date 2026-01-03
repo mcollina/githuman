@@ -16,10 +16,10 @@ interface DiffFileProps {
 
 function getStatusBadge(status: DiffFileType['status']) {
   const styles = {
-    added: 'bg-green-100 text-green-700',
-    deleted: 'bg-red-100 text-red-700',
-    modified: 'bg-yellow-100 text-yellow-700',
-    renamed: 'bg-blue-100 text-blue-700',
+    added: 'gh-badge gh-badge-success',
+    deleted: 'gh-badge gh-badge-error',
+    modified: 'gh-badge gh-badge-warning',
+    renamed: 'gh-badge gh-badge-purple',
   };
 
   const labels = {
@@ -30,7 +30,7 @@ function getStatusBadge(status: DiffFileType['status']) {
   };
 
   return (
-    <span className={cn('px-2 py-0.5 text-xs font-medium rounded', styles[status])}>
+    <span className={styles[status]}>
       {labels[status]}
     </span>
   );
@@ -59,42 +59,41 @@ export function DiffFile({ file, defaultExpanded = true, forceExpanded, allowCom
   const canShowFullFile = !isImage && !isMarkdown && (file.status === 'added' || file.status === 'modified' || file.status === 'renamed');
 
   return (
-    <div id={filePath} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <div className="flex items-center bg-gray-50 border-b border-gray-200">
+    <div id={filePath} className="gh-card overflow-hidden">
+      <div className="flex items-center bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)]">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 hover:bg-gray-100 text-left"
+          className="flex-1 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 hover:bg-[var(--gh-bg-elevated)] text-left transition-colors"
         >
           <svg
-            className={cn('w-4 h-4 text-gray-500 transition-transform shrink-0', isExpanded && 'rotate-90')}
+            className={cn('w-4 h-4 text-[var(--gh-text-muted)] transition-transform shrink-0', isExpanded && 'rotate-90')}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span className="font-mono text-xs sm:text-sm text-gray-700 flex-1 truncate min-w-0">
+          <span className="font-mono text-xs sm:text-sm text-[var(--gh-text-primary)] flex-1 truncate min-w-0">
             {displayPath}
           </span>
           <span className="hidden sm:inline-block">{getStatusBadge(file.status)}</span>
-          <span className="text-xs sm:text-sm text-gray-500 shrink-0">
-            <span className="text-green-600">+{file.additions}</span>
-            <span className="hidden sm:inline">{' / '}</span>
-            <span className="sm:hidden">/</span>
-            <span className="text-red-600">-{file.deletions}</span>
+          <span className="text-xs sm:text-sm shrink-0 font-mono">
+            <span className="text-[var(--gh-success)]">+{file.additions}</span>
+            <span className="text-[var(--gh-text-muted)]">{' / '}</span>
+            <span className="text-[var(--gh-error)]">-{file.deletions}</span>
           </span>
         </button>
 
         {/* View mode toggle */}
         {isExpanded && canShowFullFile && file.hunks.length > 0 && (
-          <div className="flex items-center border-l border-gray-200 px-2">
+          <div className="flex items-center border-l border-[var(--gh-border)] px-2">
             <button
               onClick={() => setViewMode('diff')}
               className={cn(
-                'px-2 py-1 text-xs rounded-l border border-gray-300',
+                'px-2 py-1 text-xs rounded-l border border-[var(--gh-border)] transition-colors',
                 viewMode === 'diff'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
+                  ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
+                  : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)]'
               )}
               title="Show diff hunks only"
             >
@@ -103,10 +102,10 @@ export function DiffFile({ file, defaultExpanded = true, forceExpanded, allowCom
             <button
               onClick={() => setViewMode('full')}
               className={cn(
-                'px-2 py-1 text-xs rounded-r border border-l-0 border-gray-300',
+                'px-2 py-1 text-xs rounded-r border border-l-0 border-[var(--gh-border)] transition-colors',
                 viewMode === 'full'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
+                  ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
+                  : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)]'
               )}
               title="Show full file"
             >
@@ -123,7 +122,7 @@ export function DiffFile({ file, defaultExpanded = true, forceExpanded, allowCom
           ) : isMarkdown ? (
             <MarkdownDiff file={file} allowComments={allowComments} />
           ) : file.hunks.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center text-[var(--gh-text-muted)] text-sm">
               {file.status === 'renamed' ? 'File renamed (no content changes)' : 'No changes to display'}
             </div>
           ) : viewMode === 'full' && canShowFullFile ? (

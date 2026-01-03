@@ -1,19 +1,77 @@
 @import "tailwindcss";
 
+/* Import distinctive fonts */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* GitHuman Design System - "Terminal Noir with Electric Accents" */
 :root {
-  --diff-added-bg: #e6ffec;
-  --diff-removed-bg: #ffebe9;
-  --diff-added-text: #24292f;
-  --diff-removed-text: #24292f;
-  --diff-hunk-bg: #f6f8fa;
-  --diff-line-number: #656d76;
+  /* Background colors - deep slate tones */
+  --gh-bg-primary: #0a0f1a;
+  --gh-bg-secondary: #111827;
+  --gh-bg-elevated: #1a2234;
+  --gh-bg-surface: #1e293b;
+
+  /* Accent colors - electric and vibrant */
+  --gh-accent-primary: #06d6d6;
+  --gh-accent-secondary: #a855f7;
+  --gh-accent-tertiary: #f472b6;
+
+  /* Semantic colors */
+  --gh-success: #22c55e;
+  --gh-warning: #fbbf24;
+  --gh-error: #f43f5e;
+
+  /* Text colors */
+  --gh-text-primary: #f1f5f9;
+  --gh-text-secondary: #94a3b8;
+  --gh-text-muted: #64748b;
+
+  /* Border colors */
+  --gh-border: #334155;
+  --gh-border-subtle: #1e293b;
+
+  /* Diff colors - dark mode optimized */
+  --diff-added-bg: rgba(34, 197, 94, 0.15);
+  --diff-added-border: #22c55e;
+  --diff-removed-bg: rgba(244, 63, 94, 0.15);
+  --diff-removed-border: #f43f5e;
+  --diff-hunk-bg: #1e293b;
+  --diff-line-number: #64748b;
+
+  /* Glow effects */
+  --gh-glow-cyan: 0 0 20px rgba(6, 214, 214, 0.3);
+  --gh-glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+/* Base styles */
+html {
+  font-family: 'Syne', system-ui, sans-serif;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  background: var(--gh-bg-primary);
+  color: var(--gh-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Diff line styles */
+/* Subtle noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Code and mono text */
+.font-mono, code, pre {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Diff line styles - updated for dark theme */
 .diff-line-added {
   background-color: var(--diff-added-bg);
 }
@@ -27,30 +85,174 @@ body {
   @apply select-none text-right pr-2 text-sm font-mono;
 }
 
-/* Syntax highlighting - ensure shiki integrates with diff backgrounds */
+/* Shiki syntax highlighting integration */
 .shiki-line {
-  /* Remove any background from shiki */
   background: transparent !important;
 }
 
 .shiki-line span {
-  /* Ensure shiki tokens don't have backgrounds that clash with diff */
   background: transparent !important;
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - sleek dark theme */
 ::-webkit-scrollbar {
-  @apply w-2 h-2;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  background: var(--gh-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded;
+  background: var(--gh-border);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  background: #475569;
+}
+
+/* Custom focus ring with glow */
+*:focus-visible {
+  outline: 2px solid var(--gh-accent-primary);
+  outline-offset: 2px;
+  box-shadow: var(--gh-glow-cyan);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(6, 214, 214, 0.3);
+  color: var(--gh-text-primary);
+}
+
+/* Button base styles */
+.gh-btn {
+  @apply px-4 py-2 font-semibold rounded-lg transition-all duration-200;
+}
+
+.gh-btn-primary {
+  background: linear-gradient(135deg, var(--gh-accent-primary) 0%, #0891b2 100%);
+  color: var(--gh-bg-primary);
+  box-shadow: var(--gh-glow-cyan);
+}
+
+.gh-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 30px rgba(6, 214, 214, 0.4);
+}
+
+/* Card/panel styles */
+.gh-card {
+  background: var(--gh-bg-elevated);
+  border: 1px solid var(--gh-border);
+  border-radius: 12px;
+}
+
+/* Animated gradient border effect */
+.gh-gradient-border {
+  position: relative;
+  background: var(--gh-bg-elevated);
+  border-radius: 12px;
+}
+
+.gh-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, var(--gh-accent-primary), var(--gh-accent-secondary), var(--gh-accent-tertiary));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* Status badge styles */
+.gh-badge {
+  @apply px-2.5 py-1 text-xs font-semibold rounded-full;
+}
+
+.gh-badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--gh-success);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.gh-badge-warning {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--gh-warning);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.gh-badge-error {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--gh-error);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.gh-badge-info {
+  background: rgba(6, 214, 214, 0.15);
+  color: var(--gh-accent-primary);
+  border: 1px solid rgba(6, 214, 214, 0.3);
+}
+
+.gh-badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--gh-accent-secondary);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+/* Input styles */
+.gh-input {
+  background: var(--gh-bg-secondary);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-text-primary);
+  @apply px-3 py-2 rounded-lg transition-all duration-200;
+}
+
+.gh-input:focus {
+  border-color: var(--gh-accent-primary);
+  box-shadow: var(--gh-glow-cyan);
+}
+
+.gh-input::placeholder {
+  color: var(--gh-text-muted);
+}
+
+/* Spinner animation */
+@keyframes gh-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.gh-spinner {
+  animation: gh-spin 1s linear infinite;
+  border: 2px solid var(--gh-border);
+  border-top-color: var(--gh-accent-primary);
+  border-radius: 50%;
+}
+
+/* Pulse animation for badges */
+@keyframes gh-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.gh-pulse {
+  animation: gh-pulse 2s ease-in-out infinite;
+}
+
+/* Slide in animation */
+@keyframes gh-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gh-animate-in {
+  animation: gh-slide-in 0.3s ease-out;
 }

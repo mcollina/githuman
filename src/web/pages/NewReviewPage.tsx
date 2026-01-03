@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { gitApi, reviewsApi, type BranchInfo, type CommitInfo } from '../api/reviews';
+import { gitApi, type BranchInfo, type CommitInfo } from '../api/reviews';
 import { useCreateReview } from '../hooks/useReviews';
 import { cn } from '../lib/utils';
 
@@ -82,8 +82,8 @@ export function NewReviewPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading repository info...</p>
+          <div className="gh-spinner w-8 h-8 mx-auto"></div>
+          <p className="mt-4 text-[var(--gh-text-secondary)]">Loading repository info...</p>
         </div>
       </div>
     );
@@ -92,8 +92,8 @@ export function NewReviewPage() {
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <p className="text-red-700">{error}</p>
+        <div className="gh-card p-6 border-[var(--gh-error)]/30">
+          <p className="text-[var(--gh-error)]">{error}</p>
         </div>
       </div>
     );
@@ -107,33 +107,33 @@ export function NewReviewPage() {
   return (
     <div className="flex-1 p-6 overflow-auto">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Create New Review</h1>
+        <h1 className="text-2xl font-bold text-[var(--gh-text-primary)] mb-6">Create New Review</h1>
 
         {createError && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{createError}</p>
+          <div className="mb-6 gh-card p-4 border-[var(--gh-error)]/30">
+            <p className="text-[var(--gh-error)]">{createError}</p>
           </div>
         )}
 
         {/* Source Selection */}
-        <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
+        <div className="gh-card divide-y divide-[var(--gh-border)]">
           {/* Staged Changes */}
           <button
             onClick={() => setSource('staged')}
             className={cn(
-              'w-full p-4 text-left hover:bg-gray-50 flex items-start gap-4',
-              source === 'staged' && 'bg-blue-50 hover:bg-blue-50'
+              'w-full p-4 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-4 transition-colors',
+              source === 'staged' && 'bg-[var(--gh-accent-primary)]/5'
             )}
           >
             <div className={cn(
-              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5',
-              source === 'staged' ? 'border-blue-600' : 'border-gray-300'
+              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors',
+              source === 'staged' ? 'border-[var(--gh-accent-primary)]' : 'border-[var(--gh-border)]'
             )}>
-              {source === 'staged' && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+              {source === 'staged' && <div className="w-2.5 h-2.5 rounded-full bg-[var(--gh-accent-primary)]" />}
             </div>
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Staged Changes</div>
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="font-semibold text-[var(--gh-text-primary)]">Staged Changes</div>
+              <div className="text-sm text-[var(--gh-text-secondary)] mt-1">
                 {hasStagedChanges
                   ? 'Review the currently staged changes in git'
                   : 'No staged changes available'
@@ -141,7 +141,7 @@ export function NewReviewPage() {
               </div>
             </div>
             {hasStagedChanges && (
-              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">
+              <span className="gh-badge gh-badge-success">
                 Available
               </span>
             )}
@@ -151,19 +151,19 @@ export function NewReviewPage() {
           <button
             onClick={() => setSource('branch')}
             className={cn(
-              'w-full p-4 text-left hover:bg-gray-50 flex items-start gap-4',
-              source === 'branch' && 'bg-blue-50 hover:bg-blue-50'
+              'w-full p-4 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-4 transition-colors',
+              source === 'branch' && 'bg-[var(--gh-accent-primary)]/5'
             )}
           >
             <div className={cn(
-              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5',
-              source === 'branch' ? 'border-blue-600' : 'border-gray-300'
+              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors',
+              source === 'branch' ? 'border-[var(--gh-accent-primary)]' : 'border-[var(--gh-border)]'
             )}>
-              {source === 'branch' && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+              {source === 'branch' && <div className="w-2.5 h-2.5 rounded-full bg-[var(--gh-accent-primary)]" />}
             </div>
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Branch Comparison</div>
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="font-semibold text-[var(--gh-text-primary)]">Branch Comparison</div>
+              <div className="text-sm text-[var(--gh-text-secondary)] mt-1">
                 Compare current branch against another branch
               </div>
             </div>
@@ -173,19 +173,19 @@ export function NewReviewPage() {
           <button
             onClick={() => setSource('commits')}
             className={cn(
-              'w-full p-4 text-left hover:bg-gray-50 flex items-start gap-4',
-              source === 'commits' && 'bg-blue-50 hover:bg-blue-50'
+              'w-full p-4 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-4 transition-colors',
+              source === 'commits' && 'bg-[var(--gh-accent-primary)]/5'
             )}
           >
             <div className={cn(
-              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5',
-              source === 'commits' ? 'border-blue-600' : 'border-gray-300'
+              'w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors',
+              source === 'commits' ? 'border-[var(--gh-accent-primary)]' : 'border-[var(--gh-border)]'
             )}>
-              {source === 'commits' && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+              {source === 'commits' && <div className="w-2.5 h-2.5 rounded-full bg-[var(--gh-accent-primary)]" />}
             </div>
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Specific Commits</div>
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="font-semibold text-[var(--gh-text-primary)]">Specific Commits</div>
+              <div className="text-sm text-[var(--gh-text-secondary)] mt-1">
                 Select one or more commits to review
               </div>
             </div>
@@ -194,14 +194,14 @@ export function NewReviewPage() {
 
         {/* Branch Selection */}
         {source === 'branch' && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mt-6 gh-card p-4">
+            <label className="block text-sm font-semibold text-[var(--gh-text-primary)] mb-2">
               Compare against branch
             </label>
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="gh-input w-full"
             >
               <option value="">Select a branch...</option>
               {branches.filter(b => !b.isCurrent).map((branch) => (
@@ -210,7 +210,7 @@ export function NewReviewPage() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[var(--gh-text-muted)] mt-2">
               Shows changes from the selected branch to current HEAD
             </p>
           </div>
@@ -218,45 +218,45 @@ export function NewReviewPage() {
 
         {/* Commit Selection */}
         {source === 'commits' && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-lg p-4">
+          <div className="mt-6 gh-card p-4">
             <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-semibold text-[var(--gh-text-primary)]">
                 Select commits to review
               </label>
               {selectedCommits.length > 0 && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-[var(--gh-accent-primary)]">
                   {selectedCommits.length} selected
                 </span>
               )}
             </div>
-            <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+            <div className="max-h-80 overflow-y-auto border border-[var(--gh-border)] rounded-lg divide-y divide-[var(--gh-border)]">
               {commits.map((commit) => (
                 <button
                   key={commit.sha}
                   onClick={() => toggleCommit(commit.sha)}
                   className={cn(
-                    'w-full p-3 text-left hover:bg-gray-50 flex items-start gap-3',
-                    selectedCommits.includes(commit.sha) && 'bg-blue-50 hover:bg-blue-50'
+                    'w-full p-3 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-3 transition-colors',
+                    selectedCommits.includes(commit.sha) && 'bg-[var(--gh-accent-primary)]/5'
                   )}
                 >
                   <div className={cn(
-                    'w-4 h-4 rounded border flex items-center justify-center mt-0.5',
+                    'w-4 h-4 rounded border flex items-center justify-center mt-0.5 transition-colors',
                     selectedCommits.includes(commit.sha)
-                      ? 'border-blue-600 bg-blue-600'
-                      : 'border-gray-300'
+                      ? 'border-[var(--gh-accent-primary)] bg-[var(--gh-accent-primary)]'
+                      : 'border-[var(--gh-border)]'
                   )}>
                     {selectedCommits.includes(commit.sha) && (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-3 h-3 text-[var(--gh-bg-primary)]" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-gray-500">{commit.sha.slice(0, 7)}</span>
-                      <span className="text-xs text-gray-400">{commit.author}</span>
+                      <span className="font-mono text-xs text-[var(--gh-accent-primary)]">{commit.sha.slice(0, 7)}</span>
+                      <span className="text-xs text-[var(--gh-text-muted)]">{commit.author}</span>
                     </div>
-                    <div className="text-sm text-gray-900 truncate mt-0.5">{commit.message}</div>
+                    <div className="text-sm text-[var(--gh-text-primary)] truncate mt-0.5">{commit.message}</div>
                   </div>
                 </button>
               ))}
@@ -268,14 +268,17 @@ export function NewReviewPage() {
         <div className="mt-6 flex gap-3">
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-sm font-medium text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreateReview}
             disabled={!canCreate || creating}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              'gh-btn gh-btn-primary text-sm',
+              (!canCreate || creating) && 'opacity-50 cursor-not-allowed'
+            )}
           >
             {creating ? 'Creating...' : 'Create Review'}
           </button>

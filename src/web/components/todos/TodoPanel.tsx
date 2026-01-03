@@ -182,12 +182,12 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
   return (
     <div className={cn('flex flex-col h-full', className)}>
       {/* Header */}
-      <div className="p-3 border-b border-gray-200">
+      <div className="p-3 border-b border-[var(--gh-border)]">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-medium text-gray-700">
+          <h2 className="text-sm font-semibold text-[var(--gh-text-primary)]">
             Todos
             {stats && (
-              <span className="ml-1 text-gray-400">
+              <span className="ml-1 text-[var(--gh-accent-primary)]">
                 ({stats.pending} pending)
               </span>
             )}
@@ -197,7 +197,7 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
               onClick={handleClearCompleted}
               disabled={isDisabled}
               className={cn(
-                'text-xs text-gray-500 hover:text-red-600',
+                'text-xs text-[var(--gh-text-muted)] hover:text-[var(--gh-error)] transition-colors',
                 isDisabled && 'opacity-50 cursor-not-allowed'
               )}
             >
@@ -213,10 +213,10 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
               key={btn.value}
               onClick={() => setFilter(btn.value)}
               className={cn(
-                'px-2 py-1 text-xs rounded',
+                'px-2 py-1 text-xs rounded-md transition-colors',
                 filter === btn.value
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-[var(--gh-accent-primary)]/10 text-[var(--gh-accent-primary)]'
+                  : 'text-[var(--gh-text-muted)] hover:bg-[var(--gh-bg-elevated)] hover:text-[var(--gh-text-secondary)]'
               )}
             >
               {btn.label}
@@ -226,16 +226,16 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
       </div>
 
       {/* Add input */}
-      <div className="p-3 border-b border-gray-200">
+      <div className="p-3 border-b border-[var(--gh-border)]">
         <TodoInput onAdd={handleAdd} disabled={isDisabled} />
       </div>
 
       {/* Todo list */}
       <div className="flex-1 overflow-y-auto p-2" ref={listRef}>
         {loading ? (
-          <p className="text-sm text-gray-500 px-2">Loading...</p>
+          <p className="text-sm text-[var(--gh-text-muted)] px-2">Loading...</p>
         ) : todos.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">
+          <p className="text-sm text-[var(--gh-text-muted)] px-2">
             {filter === 'all' ? 'No todos yet' : `No ${filter} todos`}
           </p>
         ) : (
@@ -266,8 +266,8 @@ export function TodoPanel({ reviewId, className }: TodoPanelProps) {
 
       {/* Footer stats */}
       {stats && stats.total > 0 && (
-        <div className="p-2 border-t border-gray-200 text-xs text-gray-400">
-          {stats.completed}/{stats.total} completed
+        <div className="p-2 border-t border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)]">
+          <span className="text-[var(--gh-success)]">{stats.completed}</span>/{stats.total} completed
         </div>
       )}
     </div>

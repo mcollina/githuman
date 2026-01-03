@@ -27,10 +27,10 @@ function getSourceLabel(sourceType: ReviewSourceType, sourceRef: string | null) 
   return 'Unknown';
 }
 
-const statusOptions: { value: ReviewStatus; label: string; color: string }[] = [
-  { value: 'in_progress', label: 'In Progress', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'approved', label: 'Approved', color: 'bg-green-100 text-green-700' },
-  { value: 'changes_requested', label: 'Changes Requested', color: 'bg-red-100 text-red-700' },
+const statusOptions: { value: ReviewStatus; label: string; className: string }[] = [
+  { value: 'in_progress', label: 'In Progress', className: 'bg-[var(--gh-warning)]/15 text-[var(--gh-warning)] border-[var(--gh-warning)]/30' },
+  { value: 'approved', label: 'Approved', className: 'bg-[var(--gh-success)]/15 text-[var(--gh-success)] border-[var(--gh-success)]/30' },
+  { value: 'changes_requested', label: 'Changes Requested', className: 'bg-[var(--gh-error)]/15 text-[var(--gh-error)] border-[var(--gh-error)]/30' },
 ];
 
 function formatDate(dateString: string) {
@@ -81,17 +81,17 @@ function CommentStats({ reviewId }: { reviewId: string }) {
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="text-gray-500">
-        <span className="font-medium">{stats.total}</span> comments
+      <span className="text-[var(--gh-text-secondary)]">
+        <span className="font-semibold text-[var(--gh-text-primary)]">{stats.total}</span> comments
       </span>
       {stats.unresolved > 0 && (
-        <span className="text-orange-600">
-          <span className="font-medium">{stats.unresolved}</span> unresolved
+        <span className="text-[var(--gh-warning)]">
+          <span className="font-semibold">{stats.unresolved}</span> unresolved
         </span>
       )}
       {stats.resolved > 0 && (
-        <span className="text-green-600">
-          <span className="font-medium">{stats.resolved}</span> resolved
+        <span className="text-[var(--gh-success)]">
+          <span className="font-semibold">{stats.resolved}</span> resolved
         </span>
       )}
     </div>
@@ -163,8 +163,8 @@ export function ReviewPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading review...</p>
+          <div className="gh-spinner w-8 h-8 mx-auto"></div>
+          <p className="mt-4 text-[var(--gh-text-secondary)]">Loading review...</p>
         </div>
       </div>
     );
@@ -174,11 +174,11 @@ export function ReviewPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-700 mb-4">{error.message}</p>
+          <div className="gh-card p-6 border-[var(--gh-error)]/30">
+            <p className="text-[var(--gh-error)] mb-4">{error.message}</p>
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-[var(--gh-bg-elevated)] text-[var(--gh-text-primary)] text-sm font-medium rounded-lg hover:bg-[var(--gh-bg-surface)] transition-colors"
             >
               Back to Reviews
             </button>
@@ -209,24 +209,24 @@ export function ReviewPage() {
           selectedIndex={selectedFileIndex}
         />
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-3 sm:p-4 border-b border-gray-200 bg-white">
+          <div className="p-3 sm:p-4 border-b border-[var(--gh-border)] bg-[var(--gh-bg-secondary)]">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                  <span className="gh-badge gh-badge-info">
                     {getSourceLabel(data.sourceType, data.sourceRef)}
                   </span>
                   {data.baseRef && (
-                    <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs text-[var(--gh-text-muted)] bg-[var(--gh-bg-elevated)] px-2 py-0.5 rounded">
                       {data.baseRef.slice(0, 8)}
                     </span>
                   )}
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-[var(--gh-text-secondary)]">
                   <span>Created {formatDate(data.createdAt)}</span>
-                  <span>{data.summary.totalFiles} files</span>
-                  <span className="text-green-600">+{data.summary.totalAdditions}</span>
-                  <span className="text-red-600">-{data.summary.totalDeletions}</span>
+                  <span className="font-mono">{data.summary.totalFiles} files</span>
+                  <span className="font-mono text-[var(--gh-success)]">+{data.summary.totalAdditions}</span>
+                  <span className="font-mono text-[var(--gh-error)]">-{data.summary.totalDeletions}</span>
                 </div>
                 <div className="mt-2">
                   <CommentStats reviewId={id!} />
@@ -238,8 +238,8 @@ export function ReviewPage() {
                   onChange={(e) => handleStatusChange(e.target.value as ReviewStatus)}
                   disabled={updating}
                   className={cn(
-                    'px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border-0 cursor-pointer',
-                    currentStatus?.color
+                    'px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg border cursor-pointer transition-colors',
+                    currentStatus?.className
                   )}
                 >
                   {statusOptions.map((option) => (
@@ -250,7 +250,7 @@ export function ReviewPage() {
                 </select>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
+                  className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-[var(--gh-error)] hover:bg-[var(--gh-error)]/10 rounded-lg transition-colors"
                 >
                   Delete
                 </button>
@@ -268,25 +268,25 @@ export function ReviewPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
-            <div className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900">Delete Review</h2>
-              <p className="mt-2 text-sm text-gray-500">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="gh-card w-full max-w-sm mx-4 gh-animate-in">
+            <div className="p-5">
+              <h2 className="text-lg font-bold text-[var(--gh-text-primary)]">Delete Review</h2>
+              <p className="mt-2 text-sm text-[var(--gh-text-secondary)]">
                 Are you sure you want to delete this review? This action cannot be undone.
               </p>
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-4 border-t border-[var(--gh-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--gh-error)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--gh-error)]/90 disabled:opacity-50 transition-colors"
               >
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>

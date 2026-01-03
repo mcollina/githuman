@@ -65,29 +65,29 @@ export function LineComment({
   return (
     <div
       className={cn(
-        'mx-2 sm:ml-[6.25rem] sm:mr-4 my-2 bg-white border rounded-lg shadow-sm',
-        comment.resolved ? 'border-gray-200 opacity-60' : 'border-blue-200'
+        'mx-2 sm:ml-[6.25rem] sm:mr-4 my-2 gh-card',
+        comment.resolved ? 'opacity-60' : 'border-[var(--gh-accent-primary)]/30'
       )}
     >
       <div
-        className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200 rounded-t-lg cursor-pointer"
+        className="flex items-center justify-between px-3 py-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)] rounded-t-lg cursor-pointer"
         onClick={toggleActions}
       >
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-500">{formatDate(comment.createdAt)}</span>
+          <span className="text-xs text-[var(--gh-text-muted)]">{formatDate(comment.createdAt)}</span>
           {comment.resolved && (
-            <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">
+            <span className="gh-badge gh-badge-success">
               Resolved
             </span>
           )}
           {comment.suggestion && (
-            <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
+            <span className="gh-badge gh-badge-purple">
               Suggestion
             </span>
           )}
         </div>
         <svg
-          className={cn('w-4 h-4 text-gray-400 transition-transform', showActions && 'rotate-180')}
+          className={cn('w-4 h-4 text-[var(--gh-text-muted)] transition-transform', showActions && 'rotate-180')}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -98,7 +98,7 @@ export function LineComment({
 
       {/* Actions bar - shown on toggle */}
       {showActions && (
-        <div className="flex items-center gap-1 px-3 py-2 bg-gray-100 border-b border-gray-200">
+        <div className="flex items-center gap-1 px-3 py-2 bg-[var(--gh-bg-elevated)] border-b border-[var(--gh-border)]">
           {comment.resolved ? (
             <button
               type="button"
@@ -106,7 +106,7 @@ export function LineComment({
                 e.stopPropagation();
                 onUnresolve?.(comment.id);
               }}
-              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
+              className="px-2 py-1 text-xs text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)] rounded transition-colors"
             >
               Unresolve
             </button>
@@ -117,7 +117,7 @@ export function LineComment({
                 e.stopPropagation();
                 onResolve?.(comment.id);
               }}
-              className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
+              className="px-2 py-1 text-xs text-[var(--gh-success)] hover:bg-[var(--gh-success)]/10 rounded transition-colors"
             >
               Resolve
             </button>
@@ -129,7 +129,7 @@ export function LineComment({
               setIsEditing(true);
               setShowActions(false);
             }}
-            className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
+            className="px-2 py-1 text-xs text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)] rounded transition-colors"
           >
             Edit
           </button>
@@ -140,7 +140,7 @@ export function LineComment({
               handleDelete();
             }}
             disabled={deleting}
-            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
+            className="px-2 py-1 text-xs text-[var(--gh-error)] hover:bg-[var(--gh-error)]/10 rounded transition-colors disabled:opacity-50"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </button>
@@ -153,7 +153,7 @@ export function LineComment({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="gh-input w-full text-sm resize-none"
               rows={3}
               autoFocus
             />
@@ -161,14 +161,14 @@ export function LineComment({
               <button
                 type="button"
                 onClick={handleCancelEdit}
-                className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                className="px-3 py-1 text-xs text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] rounded transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveEdit}
-                className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="gh-btn gh-btn-primary text-xs py-1"
               >
                 Save
               </button>
@@ -176,11 +176,11 @@ export function LineComment({
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+            <p className="text-sm text-[var(--gh-text-primary)] whitespace-pre-wrap break-words">{comment.content}</p>
             {comment.suggestion && (
-              <div className="mt-3 p-3 bg-gray-900 rounded-lg overflow-x-auto">
-                <div className="text-xs text-gray-400 mb-2">Suggested change:</div>
-                <pre className="text-sm text-green-400 font-mono">
+              <div className="mt-3 p-3 bg-[var(--gh-bg-primary)] rounded-lg overflow-x-auto border border-[var(--gh-border)]">
+                <div className="text-xs text-[var(--gh-accent-secondary)] mb-2 font-semibold">Suggested change:</div>
+                <pre className="text-sm text-[var(--gh-success)] font-mono">
                   <code>{comment.suggestion}</code>
                 </pre>
               </div>

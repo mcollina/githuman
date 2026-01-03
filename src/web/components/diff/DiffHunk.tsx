@@ -24,8 +24,8 @@ export function DiffHunk({ hunk, filePath, showLineNumbers = true, allowComments
   }, [highlighter?.isReady, filePath, hunk.lines, highlighter]);
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0 min-w-max">
-      <div className="bg-blue-50 px-4 py-1 font-mono text-sm text-blue-700 border-y border-blue-200">
+    <div className="border-b border-[var(--gh-border)] last:border-b-0 min-w-max">
+      <div className="bg-[var(--gh-accent-secondary)]/10 px-4 py-1 font-mono text-sm text-[var(--gh-accent-secondary)] border-y border-[var(--gh-accent-secondary)]/20">
         {header}
       </div>
       <div>

@@ -23,13 +23,13 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
   };
 
   return (
-    <form onSubmit={handleSubmit} className="ml-[6.25rem] mr-4 my-2 bg-white border border-blue-200 rounded-lg shadow-sm">
+    <form onSubmit={handleSubmit} className="mx-2 sm:ml-[6.25rem] sm:mr-4 my-2 gh-card border-[var(--gh-accent-primary)]/30">
       <div className="p-3 space-y-3">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Write a comment..."
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="gh-input w-full text-sm resize-none"
           rows={3}
           autoFocus
           disabled={loading}
@@ -39,7 +39,7 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
           <button
             type="button"
             onClick={() => setShowSuggestionField(true)}
-            className="text-xs text-purple-600 hover:text-purple-700"
+            className="text-xs text-[var(--gh-accent-secondary)] hover:text-[var(--gh-accent-secondary)]/80 transition-colors"
           >
             + Add code suggestion
           </button>
@@ -48,14 +48,14 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
         {showSuggestionField && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-gray-600">Code suggestion</label>
+              <label className="text-xs font-semibold text-[var(--gh-accent-secondary)]">Code suggestion</label>
               <button
                 type="button"
                 onClick={() => {
                   setShowSuggestionField(false);
                   setSuggestion('');
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-xs text-[var(--gh-text-muted)] hover:text-[var(--gh-text-secondary)] transition-colors"
               >
                 Remove
               </button>
@@ -64,7 +64,7 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
               value={suggestion}
               onChange={(e) => setSuggestion(e.target.value)}
               placeholder="Paste or type the suggested code..."
-              className="w-full px-3 py-2 text-sm font-mono bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              className="gh-input w-full text-sm font-mono resize-none"
               rows={4}
               disabled={loading}
             />
@@ -75,7 +75,7 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="px-3 py-1.5 text-sm text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] rounded-lg transition-colors"
             disabled={loading}
           >
             Cancel
@@ -84,10 +84,8 @@ export function CommentForm({ onSubmit, onCancel, loading, showSuggestion = true
             type="submit"
             disabled={!content.trim() || loading}
             className={cn(
-              'px-3 py-1.5 text-sm font-medium text-white rounded-lg',
-              content.trim() && !loading
-                ? 'bg-blue-600 hover:bg-blue-700'
-                : 'bg-gray-300 cursor-not-allowed'
+              'gh-btn gh-btn-primary text-sm py-1.5',
+              (!content.trim() || loading) && 'opacity-50 cursor-not-allowed'
             )}
           >
             {loading ? 'Adding...' : 'Add Comment'}

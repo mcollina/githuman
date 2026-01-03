@@ -77,8 +77,8 @@ export function StagedChangesPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading staged changes...</p>
+          <div className="gh-spinner w-8 h-8 mx-auto"></div>
+          <p className="mt-4 text-[var(--gh-text-secondary)]">Loading staged changes...</p>
         </div>
       </div>
     );
@@ -88,11 +88,11 @@ export function StagedChangesPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-700 mb-4">{error.message}</p>
+          <div className="gh-card p-6 border-[var(--gh-error)]/30">
+            <p className="text-[var(--gh-error)] mb-4">{error.message}</p>
             <button
               onClick={refetch}
-              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+              className="px-4 py-2 bg-[var(--gh-error)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--gh-error)]/90 transition-colors"
             >
               Retry
             </button>
@@ -117,15 +117,15 @@ export function StagedChangesPage() {
             />
             <div className="flex-1 flex flex-col min-w-0">
               {hasChanges && (
-                <div className="p-3 sm:p-4 border-b border-gray-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="p-3 sm:p-4 border-b border-[var(--gh-border)] bg-[var(--gh-bg-secondary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs sm:text-sm text-gray-600">
+                    <div className="text-xs sm:text-sm text-[var(--gh-text-secondary)]">
                       {reviewId
                         ? 'Click on any line to add comments'
                         : 'Click on a line to start a review, or use the button'}
                     </div>
                     {createError && (
-                      <div className="mt-2 text-xs sm:text-sm text-red-600">
+                      <div className="mt-2 text-xs sm:text-sm text-[var(--gh-error)]">
                         {createError}
                       </div>
                     )}
@@ -133,7 +133,7 @@ export function StagedChangesPage() {
                   {reviewId ? (
                     <button
                       onClick={() => navigate(`/reviews/${reviewId}`)}
-                      className="inline-flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-green-700 shrink-0"
+                      className="inline-flex items-center px-3 sm:px-4 py-2 bg-[var(--gh-success)] text-[var(--gh-bg-primary)] text-xs sm:text-sm font-semibold rounded-lg hover:bg-[var(--gh-success)]/90 shrink-0 transition-colors"
                     >
                       <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -145,7 +145,7 @@ export function StagedChangesPage() {
                     <button
                       onClick={handleCreateReview}
                       disabled={creating}
-                      className="inline-flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 shrink-0"
+                      className="gh-btn gh-btn-primary inline-flex items-center text-xs sm:text-sm shrink-0"
                     >
                       <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

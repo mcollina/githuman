@@ -52,18 +52,19 @@ export function TodoItem({
       onDragEnd={onDragEnd}
       onDrop={(e) => onDrop?.(e, todo.id)}
       className={cn(
-        'group flex items-start gap-2 p-2 rounded hover:bg-gray-50',
+        'group flex items-start gap-2 p-2 rounded-lg transition-colors',
+        'hover:bg-[var(--gh-bg-elevated)]',
         todo.completed && 'opacity-60',
         draggable && !disabled && 'cursor-grab active:cursor-grabbing select-none',
-        isDragOver && 'border-t-2 border-blue-500',
-        isDragging && 'opacity-50 bg-blue-50'
+        isDragOver && 'border-t-2 border-[var(--gh-accent-primary)]',
+        isDragging && 'opacity-50 bg-[var(--gh-accent-primary)]/10'
       )}
     >
       {/* Drag handle - touch events only on handle for mobile */}
       {draggable && (
         <div
           className={cn(
-            'mt-0.5 w-6 h-6 flex-shrink-0 flex items-center justify-center text-gray-400 touch-none',
+            'mt-0.5 w-6 h-6 flex-shrink-0 flex items-center justify-center text-[var(--gh-text-muted)] touch-none',
             disabled && 'opacity-50'
           )}
           aria-label="Drag to reorder"
@@ -85,11 +86,11 @@ export function TodoItem({
         onClick={() => onToggle(todo.id)}
         disabled={disabled}
         className={cn(
-          'mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+          'mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--gh-accent-primary)] focus:ring-offset-1 focus:ring-offset-[var(--gh-bg-secondary)]',
           todo.completed
-            ? 'bg-green-500 border-green-500 text-white'
-            : 'border-gray-300 hover:border-gray-400',
+            ? 'bg-[var(--gh-success)] border-[var(--gh-success)] text-[var(--gh-bg-primary)]'
+            : 'border-[var(--gh-border)] hover:border-[var(--gh-accent-primary)]',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         aria-label={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
@@ -102,8 +103,8 @@ export function TodoItem({
       </button>
       <span
         className={cn(
-          'flex-1 text-sm break-words',
-          todo.completed && 'line-through text-gray-500'
+          'flex-1 text-sm break-words text-[var(--gh-text-primary)]',
+          todo.completed && 'line-through text-[var(--gh-text-muted)]'
         )}
       >
         {todo.content}
@@ -112,8 +113,8 @@ export function TodoItem({
         onClick={() => onDelete(todo.id)}
         disabled={disabled}
         className={cn(
-          'opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded',
-          'focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-red-500',
+          'opacity-0 group-hover:opacity-100 p-1 text-[var(--gh-text-muted)] hover:text-[var(--gh-error)] rounded transition-all',
+          'focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-[var(--gh-error)]',
           disabled && 'cursor-not-allowed'
         )}
         aria-label="Delete todo"

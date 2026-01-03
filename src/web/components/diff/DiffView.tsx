@@ -13,10 +13,10 @@ interface DiffViewProps {
 export function DiffView({ files, summary, selectedFile, forceExpandedFile, allowComments = false, onLineClick }: DiffViewProps) {
   if (files.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-[var(--gh-text-muted)]">
         <div className="text-center">
           <svg
-            className="w-16 h-16 mx-auto mb-4 text-gray-300"
+            className="w-16 h-16 mx-auto mb-4 text-[var(--gh-text-muted)] opacity-30"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -28,8 +28,8 @@ export function DiffView({ files, summary, selectedFile, forceExpandedFile, allo
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="text-lg font-medium">No changes to display</p>
-          <p className="text-sm">Stage some changes to see them here</p>
+          <p className="text-lg font-semibold text-[var(--gh-text-primary)]">No changes to display</p>
+          <p className="text-sm text-[var(--gh-text-secondary)]">Stage some changes to see them here</p>
         </div>
       </div>
     );
@@ -43,28 +43,28 @@ export function DiffView({ files, summary, selectedFile, forceExpandedFile, allo
   return (
     <div className="flex-1 overflow-y-auto p-4 min-w-0">
       {summary && (
-        <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
-          <div className="flex items-center gap-6 text-sm">
-            <span className="text-gray-600">
-              <span className="font-medium">{summary.totalFiles}</span> files changed
+        <div className="mb-4 gh-card p-4">
+          <div className="flex items-center gap-6 text-sm flex-wrap">
+            <span className="text-[var(--gh-text-secondary)]">
+              <span className="font-semibold text-[var(--gh-text-primary)]">{summary.totalFiles}</span> files changed
             </span>
-            <span className="text-green-600">
-              <span className="font-medium">+{summary.totalAdditions}</span> additions
+            <span className="text-[var(--gh-success)]">
+              <span className="font-semibold">+{summary.totalAdditions}</span> additions
             </span>
-            <span className="text-red-600">
-              <span className="font-medium">-{summary.totalDeletions}</span> deletions
+            <span className="text-[var(--gh-error)]">
+              <span className="font-semibold">-{summary.totalDeletions}</span> deletions
             </span>
             {summary.filesAdded > 0 && (
-              <span className="hidden sm:inline text-gray-500">{summary.filesAdded} added</span>
+              <span className="hidden sm:inline text-[var(--gh-text-muted)]">{summary.filesAdded} added</span>
             )}
             {summary.filesModified > 0 && (
-              <span className="hidden sm:inline text-gray-500">{summary.filesModified} modified</span>
+              <span className="hidden sm:inline text-[var(--gh-text-muted)]">{summary.filesModified} modified</span>
             )}
             {summary.filesDeleted > 0 && (
-              <span className="hidden sm:inline text-gray-500">{summary.filesDeleted} deleted</span>
+              <span className="hidden sm:inline text-[var(--gh-text-muted)]">{summary.filesDeleted} deleted</span>
             )}
             {summary.filesRenamed > 0 && (
-              <span className="hidden sm:inline text-gray-500">{summary.filesRenamed} renamed</span>
+              <span className="hidden sm:inline text-[var(--gh-text-muted)]">{summary.filesRenamed} renamed</span>
             )}
           </div>
         </div>

@@ -38,17 +38,15 @@ export function TodoInput({ onAdd, disabled, placeholder = 'Add a todo...' }: To
         placeholder={placeholder}
         disabled={disabled}
         className={cn(
-          'flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded',
-          'focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500',
-          disabled && 'opacity-50 cursor-not-allowed bg-gray-50'
+          'gh-input flex-1 text-sm',
+          disabled && 'opacity-50 cursor-not-allowed'
         )}
       />
       <button
         type="submit"
         disabled={disabled || !content.trim()}
         className={cn(
-          'px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded',
-          'hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+          'gh-btn gh-btn-primary text-sm',
           (disabled || !content.trim()) && 'opacity-50 cursor-not-allowed'
         )}
       >

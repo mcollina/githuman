@@ -1,0 +1,77 @@
+<svg
+  viewBox="0 0 48 48"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06d6d6" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#f472b6" />
+    </linearGradient>
+    <linearGradient id="eyeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06d6d6" />
+      <stop offset="100%" stop-color="#0891b2" />
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+      <feMerge>
+        <feMergeNode in="coloredBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Git branch lines - abstract representation -->
+  <path
+    d="M8 36 L16 24 L8 12"
+    stroke="url(#logoGradient)"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    opacity="0.6"
+  />
+  <path
+    d="M40 36 L32 24 L40 12"
+    stroke="url(#logoGradient)"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    opacity="0.6"
+  />
+
+  <!-- Central eye shape - the "human" element -->
+  <ellipse
+    cx="24"
+    cy="24"
+    rx="14"
+    ry="10"
+    stroke="url(#logoGradient)"
+    stroke-width="2.5"
+    fill="none"
+    filter="url(#glow)"
+  />
+
+  <!-- Inner eye/iris -->
+  <circle
+    cx="24"
+    cy="24"
+    r="6"
+    fill="url(#eyeGradient)"
+    filter="url(#glow)"
+  />
+
+  <!-- Pupil with highlight -->
+  <circle cx="24" cy="24" r="3" fill="#0a0f1a" />
+  <circle cx="22" cy="22" r="1" fill="white" opacity="0.8" />
+
+  <!-- Connection dots - git commits -->
+  <circle cx="8" cy="12" r="2" fill="#06d6d6" />
+  <circle cx="8" cy="36" r="2" fill="#f472b6" />
+  <circle cx="40" cy="12" r="2" fill="#a855f7" />
+  <circle cx="40" cy="36" r="2" fill="#06d6d6" />
+</svg>

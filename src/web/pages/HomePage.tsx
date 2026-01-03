@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { useReviewsList } from '../hooks/useReviews';
 import { reviewsApi } from '../api/reviews';
 import { cn } from '../lib/utils';
+import { Logo } from '../components/Logo';
 import type { ReviewStatus, ReviewSourceType } from '../../shared/types';
 
 function getStatusBadge(status: ReviewStatus) {
   const styles = {
-    in_progress: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    changes_requested: 'bg-red-100 text-red-700',
+    in_progress: 'gh-badge gh-badge-warning',
+    approved: 'gh-badge gh-badge-success',
+    changes_requested: 'gh-badge gh-badge-error',
   };
 
   const labels = {
@@ -19,7 +20,7 @@ function getStatusBadge(status: ReviewStatus) {
   };
 
   return (
-    <span className={cn('px-2 py-0.5 text-xs font-medium rounded', styles[status])}>
+    <span className={styles[status]}>
       {labels[status]}
     </span>
   );
@@ -81,11 +82,11 @@ export function HomePage() {
   return (
     <div className="flex-1 p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Reviews</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-[var(--gh-text-primary)]">Reviews</h1>
           <Link
             to="/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+            className="gh-btn gh-btn-primary inline-flex items-center text-sm"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -96,39 +97,29 @@ export function HomePage() {
 
         {loading && (
           <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-gray-500">Loading reviews...</p>
+            <div className="gh-spinner w-8 h-8 mx-auto"></div>
+            <p className="mt-4 text-[var(--gh-text-secondary)]">Loading reviews...</p>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error.message}</p>
+          <div className="gh-card p-4 border-[var(--gh-error)]/30">
+            <p className="text-[var(--gh-error)]">{error.message}</p>
           </div>
         )}
 
         {data && data.data.length === 0 && (
-          <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-gray-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            <p className="text-lg font-medium text-gray-700">No reviews yet</p>
-            <p className="text-gray-500 mt-1">
+          <div className="text-center py-16 gh-card gh-animate-in">
+            <div className="mb-6">
+              <Logo size="lg" showText={false} className="justify-center opacity-30" />
+            </div>
+            <p className="text-lg font-semibold text-[var(--gh-text-primary)]">No reviews yet</p>
+            <p className="text-[var(--gh-text-secondary)] mt-2 max-w-sm mx-auto">
               Create a new review from staged changes, branches, or commits.
             </p>
             <Link
               to="/new"
-              className="inline-flex items-center mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+              className="gh-btn gh-btn-primary inline-flex items-center mt-6 text-sm"
             >
               Create New Review
             </Link>
@@ -136,33 +127,34 @@ export function HomePage() {
         )}
 
         {data && data.data.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-            {data.data.map((review) => (
+          <div className="space-y-3">
+            {data.data.map((review, index) => (
               <Link
                 key={review.id}
                 to={`/reviews/${review.id}`}
-                className="block p-4 hover:bg-gray-50"
+                className="gh-card block p-4 hover:border-[var(--gh-accent-primary)]/50 transition-all gh-animate-in group"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="gh-badge gh-badge-info">
                         {getSourceLabel(review.sourceType, review.sourceRef)}
                       </span>
                       {getStatusBadge(review.status)}
                     </div>
-                    <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                      <span>
+                    <div className="mt-3 flex items-center gap-4 text-sm text-[var(--gh-text-secondary)]">
+                      <span className="font-mono">
                         {review.summary.totalFiles} files
                       </span>
-                      <span className="text-green-600">+{review.summary.totalAdditions}</span>
-                      <span className="text-red-600">-{review.summary.totalDeletions}</span>
-                      <span>{formatDate(review.createdAt)}</span>
+                      <span className="font-mono text-[var(--gh-success)]">+{review.summary.totalAdditions}</span>
+                      <span className="font-mono text-[var(--gh-error)]">-{review.summary.totalDeletions}</span>
+                      <span className="text-[var(--gh-text-muted)]">{formatDate(review.createdAt)}</span>
                     </div>
                   </div>
                   <button
                     onClick={(e) => handleDelete(review.id, e)}
-                    className="ml-4 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                    className="ml-4 p-2 text-[var(--gh-text-muted)] hover:text-[var(--gh-error)] hover:bg-[var(--gh-error)]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete review"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +168,7 @@ export function HomePage() {
         )}
 
         {data && data.total > data.pageSize && (
-          <div className="mt-4 text-center text-sm text-gray-500">
+          <div className="mt-6 text-center text-sm text-[var(--gh-text-muted)]">
             Showing {data.data.length} of {data.total} reviews
           </div>
         )}
@@ -184,25 +176,25 @@ export function HomePage() {
 
       {/* Delete Confirmation Modal */}
       {deleteId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
-            <div className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900">Delete Review</h2>
-              <p className="mt-2 text-sm text-gray-500">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="gh-card w-full max-w-sm mx-4 gh-animate-in">
+            <div className="p-5">
+              <h2 className="text-lg font-bold text-[var(--gh-text-primary)]">Delete Review</h2>
+              <p className="mt-2 text-sm text-[var(--gh-text-secondary)]">
                 Are you sure you want to delete this review? This action cannot be undone.
               </p>
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-4 border-t border-[var(--gh-border)] flex justify-end gap-3">
               <button
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--gh-error)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--gh-error)]/90 disabled:opacity-50 transition-colors"
               >
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>

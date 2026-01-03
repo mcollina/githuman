@@ -23,15 +23,15 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
   const isAddingComment = commentContext?.activeCommentLine === lineKey;
 
   const bgClass = {
-    added: 'bg-green-50 border-l-4 border-green-400',
-    removed: 'bg-red-50 border-l-4 border-red-400',
-    context: 'bg-white border-l-4 border-transparent',
+    added: 'bg-[var(--diff-added-bg)] border-l-4 border-[var(--diff-added-border)]',
+    removed: 'bg-[var(--diff-removed-bg)] border-l-4 border-[var(--diff-removed-border)]',
+    context: 'bg-[var(--gh-bg-elevated)] border-l-4 border-transparent',
   }[line.type];
 
   const textClass = {
-    added: 'text-green-800',
-    removed: 'text-red-800',
-    context: 'text-gray-800',
+    added: 'text-[var(--gh-success)]',
+    removed: 'text-[var(--gh-error)]',
+    context: 'text-[var(--gh-text-primary)]',
   }[line.type];
 
   const prefix = {
@@ -74,7 +74,7 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
         className={cn(
           'flex font-mono text-sm group relative min-w-max',
           bgClass,
-          isClickable && !isAddingComment && 'cursor-pointer hover:bg-blue-50/50'
+          isClickable && !isAddingComment && 'cursor-pointer hover:brightness-110'
         )}
         onClick={handleLineClick}
         role={isClickable ? 'button' : undefined}
@@ -83,15 +83,15 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
       >
         {showLineNumbers && (
           <>
-            <span className="w-12 px-2 py-0.5 text-right text-gray-400 select-none bg-gray-50 border-r border-gray-200 shrink-0">
+            <span className="w-12 px-2 py-0.5 text-right text-[var(--gh-text-muted)] select-none bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] shrink-0">
               {line.oldLineNumber ?? ''}
             </span>
-            <span className="w-12 px-2 py-0.5 text-right text-gray-400 select-none bg-gray-50 border-r border-gray-200 shrink-0">
+            <span className="w-12 px-2 py-0.5 text-right text-[var(--gh-text-muted)] select-none bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] shrink-0">
               {line.newLineNumber ?? ''}
             </span>
           </>
         )}
-        <span className={cn('w-5 px-1 py-0.5 text-center select-none shrink-0', textClass)}>
+        <span className={cn('w-5 px-1 py-0.5 text-center select-none shrink-0 font-semibold', textClass)}>
           {prefix}
         </span>
         <pre className={cn('flex-1 py-0.5 pr-4 whitespace-pre', textClass)}>
@@ -107,7 +107,7 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
 
         {/* Comment count badge */}
         {lineComments.length > 0 && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs bg-[var(--gh-accent-primary)]/20 text-[var(--gh-accent-primary)] rounded font-semibold">
             {lineComments.length}
           </span>
         )}

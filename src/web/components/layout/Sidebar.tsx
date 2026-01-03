@@ -13,15 +13,15 @@ interface SidebarProps {
 function getStatusColor(status: DiffFile['status']) {
   switch (status) {
     case 'added':
-      return 'text-green-600';
+      return 'text-[var(--gh-success)]';
     case 'deleted':
-      return 'text-red-600';
+      return 'text-[var(--gh-error)]';
     case 'modified':
-      return 'text-yellow-600';
+      return 'text-[var(--gh-warning)]';
     case 'renamed':
-      return 'text-blue-600';
+      return 'text-[var(--gh-accent-secondary)]';
     default:
-      return 'text-gray-600';
+      return 'text-[var(--gh-text-muted)]';
   }
 }
 
@@ -71,15 +71,15 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
 
   const sidebarContent = (
     <>
-      <div className="p-3 border-b border-gray-200">
+      <div className="p-3 border-b border-[var(--gh-border)]">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-medium text-gray-700">
-            Files ({files.length})
+          <h2 className="text-sm font-semibold text-[var(--gh-text-primary)]">
+            Files <span className="text-[var(--gh-accent-primary)]">({files.length})</span>
           </h2>
           {isMobile && (
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+              className="p-1 text-[var(--gh-text-muted)] hover:text-[var(--gh-text-primary)] hover:bg-[var(--gh-bg-elevated)] rounded"
               aria-label="Close sidebar"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,14 +93,14 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
           placeholder="Filter files..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="gh-input w-full text-sm"
         />
       </div>
       <nav className="p-2 flex-1 overflow-y-auto">
         {files.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">No files to display</p>
+          <p className="text-sm text-[var(--gh-text-muted)] px-2">No files to display</p>
         ) : filteredFiles.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">No matching files</p>
+          <p className="text-sm text-[var(--gh-text-muted)] px-2">No matching files</p>
         ) : (
           filteredFiles.map((file) => {
             const path = file.newPath || file.oldPath;
@@ -112,31 +112,33 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
                 key={path}
                 onClick={() => handleFileSelect(path)}
                 className={cn(
-                  'w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-2 hover:bg-gray-100',
-                  isSelected && 'bg-blue-50 text-blue-700',
-                  isHighlighted && !isSelected && 'ring-2 ring-blue-300'
+                  'w-full text-left px-2 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors',
+                  isSelected
+                    ? 'bg-[var(--gh-accent-primary)]/10 text-[var(--gh-accent-primary)]'
+                    : 'text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-elevated)] hover:text-[var(--gh-text-primary)]',
+                  isHighlighted && !isSelected && 'ring-1 ring-[var(--gh-accent-primary)]'
                 )}
               >
-                <span className={cn('font-mono text-xs', getStatusColor(file.status))}>
+                <span className={cn('font-mono text-xs font-semibold', getStatusColor(file.status))}>
                   {getStatusLabel(file.status)}
                 </span>
-                <span className="truncate flex-1 font-mono" title={path}>
+                <span className="truncate flex-1 font-mono text-xs" title={path}>
                   {path}
                 </span>
-                <span className="text-xs text-gray-400">
-                  <span className="text-green-600">+{file.additions}</span>
+                <span className="text-xs shrink-0">
+                  <span className="text-[var(--gh-success)]">+{file.additions}</span>
                   {' '}
-                  <span className="text-red-600">-{file.deletions}</span>
+                  <span className="text-[var(--gh-error)]">-{file.deletions}</span>
                 </span>
               </button>
             );
           })
         )}
       </nav>
-      <div className="p-2 border-t border-gray-200 text-xs text-gray-400">
-        <span className="font-mono">j</span>/<span className="font-mono">k</span> navigate
+      <div className="p-2 border-t border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)]">
+        <span className="font-mono text-[var(--gh-accent-primary)]">j</span>/<span className="font-mono text-[var(--gh-accent-primary)]">k</span> navigate
         {' · '}
-        <span className="font-mono">c</span> comment
+        <span className="font-mono text-[var(--gh-accent-primary)]">c</span> comment
       </div>
     </>
   );
@@ -148,14 +150,14 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
         {/* Mobile toggle button */}
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 left-4 z-40 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 active:bg-blue-800"
+          className="fixed bottom-4 left-4 z-40 p-3 gh-btn-primary rounded-full"
           aria-label="Open file list"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
           </svg>
           {files.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+            <span className="absolute -top-1 -right-1 bg-[var(--gh-accent-tertiary)] text-[var(--gh-bg-primary)] text-xs w-5 h-5 flex items-center justify-center rounded-full font-semibold">
               {files.length}
             </span>
           )}
@@ -164,7 +166,7 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
         {/* Overlay */}
         {isOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             onClick={() => setIsOpen(false)}
           />
         )}
@@ -172,7 +174,8 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
         {/* Slide-out drawer */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl flex flex-col transition-transform duration-300 ease-in-out',
+            'fixed inset-y-0 left-0 z-50 w-72 bg-[var(--gh-bg-secondary)] shadow-xl flex flex-col',
+            'transition-transform duration-300 ease-in-out border-r border-[var(--gh-border)]',
             isOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
@@ -184,7 +187,7 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex }: Si
 
   // Desktop: regular sidebar
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex flex-col">
+    <aside className="w-64 bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] overflow-y-auto flex flex-col">
       {sidebarContent}
     </aside>
   );
