@@ -73,11 +73,11 @@ const ReviewListItemSchema = Type.Object(
   {
     id: Type.String(),
     repositoryPath: Type.String(),
+    baseRef: Type.Union([Type.String(), Type.Null()]),
     sourceType: ReviewSourceTypeSchema,
     sourceRef: Type.Union([Type.String(), Type.Null()]),
     status: ReviewStatusSchema,
     summary: DiffSummarySchema,
-    commentCount: Type.Integer({ description: 'Number of comments' }),
     createdAt: Type.String({ format: 'date-time' }),
     updatedAt: Type.String({ format: 'date-time' }),
   },

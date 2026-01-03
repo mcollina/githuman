@@ -20,22 +20,18 @@ const RepositoryInfoSchema = Type.Object(
 const BranchInfoSchema = Type.Object(
   {
     name: Type.String({ description: 'Branch name' }),
-    current: Type.Boolean({ description: 'Is current branch' }),
-    commit: Type.String({ description: 'Latest commit hash' }),
-    label: Type.String({ description: 'Branch label' }),
+    isRemote: Type.Boolean({ description: 'Whether this is a remote branch' }),
+    isCurrent: Type.Boolean({ description: 'Whether this is the current branch' }),
   },
   { description: 'Branch information' }
 );
 
 const CommitInfoSchema = Type.Object(
   {
-    hash: Type.String({ description: 'Commit hash' }),
-    date: Type.String({ description: 'Commit date' }),
+    sha: Type.String({ description: 'Commit hash' }),
     message: Type.String({ description: 'Commit message' }),
-    refs: Type.String({ description: 'Reference names' }),
-    body: Type.String({ description: 'Commit body' }),
-    author_name: Type.String({ description: 'Author name' }),
-    author_email: Type.String({ description: 'Author email' }),
+    author: Type.String({ description: 'Author name' }),
+    date: Type.String({ description: 'Commit date' }),
   },
   { description: 'Commit information' }
 );
