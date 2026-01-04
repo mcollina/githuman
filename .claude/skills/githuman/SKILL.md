@@ -8,6 +8,16 @@ allowed-tools: Bash(*), Read, Glob, Grep
 
 GitHuman helps you review AI-generated code changes before committing them.
 
+## Installation
+
+```bash
+# Run directly with npx (no install needed)
+npx githuman serve
+
+# Or install globally
+npm install -g githuman
+```
+
 ## When to Use This Skill
 
 - After an AI agent has made code changes
@@ -20,7 +30,7 @@ GitHuman helps you review AI-generated code changes before committing them.
 ### 1. Start the Review Server
 
 ```bash
-githuman serve
+npx githuman serve
 ```
 
 This opens a web interface at http://localhost:3847 for visual code review.
@@ -29,7 +39,7 @@ This opens a web interface at http://localhost:3847 for visual code review.
 
 **List reviews:**
 ```bash
-githuman list
+npx githuman list
 ```
 
 **Create a review from staged changes:**
@@ -37,25 +47,25 @@ Stage your changes first with `git add`, then create a review in the web UI.
 
 **Resolve a review (mark as approved and resolve all comments):**
 ```bash
-githuman resolve <review-id|last>
+npx githuman resolve <review-id|last>
 ```
 
 **Export a review to markdown:**
 ```bash
-githuman export <review-id|last> -o review.md
+npx githuman export <review-id|last> -o review.md
 ```
 
 **Manage todos:**
 ```bash
-githuman todo list              # List pending todos
-githuman todo add "Task"        # Add a new todo
-githuman todo done <id>         # Mark as done
+npx githuman todo list              # List pending todos
+npx githuman todo add "Task"        # Add a new todo
+npx githuman todo done <id>         # Mark as done
 ```
 
 ### 3. Typical Review Flow
 
 1. AI agent makes changes and stages them with `git add`
-2. Run `githuman serve` to start the review interface
+2. Run `npx githuman serve` to start the review interface
 3. Review the diff in the web UI
 4. Add comments or suggestions on specific lines
 5. Create todos for follow-up work
@@ -64,6 +74,7 @@ githuman todo done <id>         # Mark as done
 
 ## Tips
 
-- Use `githuman resolve last` to quickly approve the most recent review
-- Export reviews with `githuman export last` to keep documentation
-- Check `githuman todo list` for pending tasks before committing
+- Use `npx githuman resolve last` to quickly approve the most recent review
+- Export reviews with `npx githuman export last` to keep documentation
+- Check `npx githuman todo list` for pending tasks before committing
+- If you use GitHuman frequently, install globally: `npm install -g githuman`
