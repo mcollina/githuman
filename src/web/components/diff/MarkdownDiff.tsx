@@ -56,17 +56,17 @@ export function MarkdownDiff({ file, allowComments = false }: MarkdownDiffProps)
   return (
     <div>
       {/* View mode toggle */}
-      <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-200">
-        <span className="text-xs text-gray-500 mr-2">View:</span>
-        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+      <div className="flex items-center gap-2 p-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)]">
+        <span className="text-xs text-[var(--gh-text-muted)] mr-2">View:</span>
+        <div className="flex rounded-lg border border-[var(--gh-border)] overflow-hidden">
           <button
             type="button"
             onClick={() => setViewMode('diff')}
             className={cn(
-              'px-3 py-1 text-xs',
+              'px-3 py-1 text-xs transition-colors',
               viewMode === 'diff'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-100'
+                ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)]'
+                : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)]'
             )}
           >
             Diff
@@ -77,10 +77,10 @@ export function MarkdownDiff({ file, allowComments = false }: MarkdownDiffProps)
                 type="button"
                 onClick={() => setViewMode('preview')}
                 className={cn(
-                  'px-3 py-1 text-xs border-l border-gray-300',
+                  'px-3 py-1 text-xs border-l border-[var(--gh-border)] transition-colors',
                   viewMode === 'preview'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)]'
+                    : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)]'
                 )}
               >
                 Preview
@@ -89,10 +89,10 @@ export function MarkdownDiff({ file, allowComments = false }: MarkdownDiffProps)
                 type="button"
                 onClick={() => setViewMode('split')}
                 className={cn(
-                  'px-3 py-1 text-xs border-l border-gray-300',
+                  'px-3 py-1 text-xs border-l border-[var(--gh-border)] transition-colors',
                   viewMode === 'split'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)]'
+                    : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)]'
                 )}
               >
                 Split
@@ -113,14 +113,14 @@ export function MarkdownDiff({ file, allowComments = false }: MarkdownDiffProps)
         />
       ) : (
         <div className="flex flex-col lg:flex-row">
-          <div className="flex-1 lg:border-r border-gray-200 min-w-0">
-            <div className="p-2 bg-gray-100 border-b border-gray-200 text-xs text-gray-500 font-medium">
+          <div className="flex-1 lg:border-r border-[var(--gh-border)] min-w-0">
+            <div className="p-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)] font-medium">
               Diff
             </div>
             <DiffContent hunks={file.hunks} filePath={filePath} allowComments={allowComments} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="p-2 bg-gray-100 border-b border-gray-200 text-xs text-gray-500 font-medium">
+            <div className="p-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)] font-medium">
               Preview
             </div>
             <PreviewContent
@@ -144,7 +144,7 @@ interface DiffContentProps {
 function DiffContent({ hunks, filePath, allowComments }: DiffContentProps) {
   if (hunks.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500 text-sm">
+      <div className="p-4 text-center text-[var(--gh-text-muted)] text-sm">
         No changes to display
       </div>
     );
@@ -173,8 +173,8 @@ interface PreviewContentProps {
 function PreviewContent({ content, loading, error }: PreviewContentProps) {
   if (loading) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+      <div className="p-4 text-center text-[var(--gh-text-muted)]">
+        <div className="gh-spinner w-5 h-5 mx-auto mb-2"></div>
         Loading preview...
       </div>
     );
@@ -182,7 +182,7 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-600">
+      <div className="p-4 text-center text-[var(--gh-error)]">
         {error}
       </div>
     );
@@ -190,20 +190,20 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
 
   if (!content) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-[var(--gh-text-muted)]">
         No content to preview
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 prose prose-sm max-w-none overflow-x-auto">
+    <div className="p-4 sm:p-6 prose prose-sm prose-invert max-w-none overflow-x-auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           // Style code blocks
           pre: ({ children }) => (
-            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+            <pre className="bg-[var(--gh-bg-primary)] text-[var(--gh-text-primary)] p-4 rounded-lg overflow-x-auto text-sm border border-[var(--gh-border)]">
               {children}
             </pre>
           ),
@@ -211,7 +211,7 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
             const isInline = !className;
             if (isInline) {
               return (
-                <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm" {...props}>
+                <code className="bg-[var(--gh-bg-surface)] text-[var(--gh-accent-primary)] px-1.5 py-0.5 rounded text-sm" {...props}>
                   {children}
                 </code>
               );
@@ -220,35 +220,35 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
           },
           // Style links
           a: ({ children, ...props }) => (
-            <a className="text-blue-600 hover:underline" {...props}>
+            <a className="text-[var(--gh-accent-primary)] hover:underline" {...props}>
               {children}
             </a>
           ),
           // Style headings
           h1: ({ children }) => (
-            <h1 className="text-2xl font-bold mt-6 mb-4 pb-2 border-b border-gray-200">
+            <h1 className="text-2xl font-bold mt-6 mb-4 pb-2 border-b border-[var(--gh-border)] text-[var(--gh-text-primary)]">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-xl font-bold mt-5 mb-3 pb-1 border-b border-gray-200">
+            <h2 className="text-xl font-bold mt-5 mb-3 pb-1 border-b border-[var(--gh-border)] text-[var(--gh-text-primary)]">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>
+            <h3 className="text-lg font-semibold mt-4 mb-2 text-[var(--gh-text-primary)]">{children}</h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-base font-semibold mt-3 mb-2">{children}</h4>
+            <h4 className="text-base font-semibold mt-3 mb-2 text-[var(--gh-text-primary)]">{children}</h4>
           ),
           // Style lists - use proper nesting with margin-left
           ul: ({ children }) => (
-            <ul className="list-disc my-2 space-y-1 ml-4 [&_ul]:ml-6 [&_ul]:mt-1">
+            <ul className="list-disc my-2 space-y-1 ml-4 [&_ul]:ml-6 [&_ul]:mt-1 text-[var(--gh-text-secondary)]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal my-2 space-y-1 ml-4 [&_ol]:ml-6 [&_ol]:mt-1">
+            <ol className="list-decimal my-2 space-y-1 ml-4 [&_ol]:ml-6 [&_ol]:mt-1 text-[var(--gh-text-secondary)]">
               {children}
             </ol>
           ),
@@ -267,7 +267,7 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
                     type="checkbox"
                     checked={inputChild.properties?.checked ?? false}
                     readOnly
-                    className="mt-1 rounded border-gray-300"
+                    className="mt-1 rounded border-[var(--gh-border)] bg-[var(--gh-bg-secondary)]"
                   />
                   <span>{children}</span>
                 </li>
@@ -277,7 +277,7 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
           },
           // Style blockquotes
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4">
+            <blockquote className="border-l-4 border-[var(--gh-accent-secondary)] pl-4 italic text-[var(--gh-text-muted)] my-4">
               {children}
             </blockquote>
           ),
@@ -288,35 +288,35 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-gray-50">{children}</thead>
+            <thead className="bg-[var(--gh-bg-secondary)]">{children}</thead>
           ),
           tr: ({ children }) => (
-            <tr className="border-t border-gray-300">{children}</tr>
+            <tr className="border-t border-[var(--gh-border)]">{children}</tr>
           ),
           th: ({ children, style }) => (
             <th
-              className="border border-gray-300 px-4 py-2 font-semibold text-left bg-gray-50"
+              className="border border-[var(--gh-border)] px-4 py-2 font-semibold text-left bg-[var(--gh-bg-secondary)] text-[var(--gh-text-primary)]"
               style={style}
             >
               {children}
             </th>
           ),
           td: ({ children, style }) => (
-            <td className="border border-gray-300 px-4 py-2" style={style}>
+            <td className="border border-[var(--gh-border)] px-4 py-2 text-[var(--gh-text-secondary)]" style={style}>
               {children}
             </td>
           ),
           // Style paragraphs
-          p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
+          p: ({ children }) => <p className="my-2 leading-relaxed text-[var(--gh-text-secondary)]">{children}</p>,
           // Style images
           img: ({ src, alt }) => (
             <img src={src} alt={alt} className="max-w-full h-auto rounded-lg my-4" />
           ),
           // Style horizontal rules
-          hr: () => <hr className="my-6 border-t border-gray-300" />,
+          hr: () => <hr className="my-6 border-t border-[var(--gh-border)]" />,
           // Style strikethrough (GFM)
           del: ({ children }) => (
-            <del className="text-gray-500 line-through">{children}</del>
+            <del className="text-[var(--gh-text-muted)] line-through">{children}</del>
           ),
         }}
       >
