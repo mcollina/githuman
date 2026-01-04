@@ -1,14 +1,12 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { spawn, execSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { createTestRepo, createTestRepoWithDb } from './test-utils.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = join(__dirname, '../../src/cli/index.ts');
+const CLI_PATH = join(import.meta.dirname, '../../src/cli/index.ts');
 
 // Create temp directories for tests
 let tempDir: string;
@@ -331,6 +329,94 @@ describe('CLI', () => {
 
       assert.strictEqual(result.exitCode, 1);
       assert.ok(result.stderr.includes('No reviews found'));
+    });
+  });
+
+  describe('install-skill command', () => {
+    it('should show help with --help flag', async () => {
+      const result = await runCli(['install-skill', '--help']);
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Usage: githuman install-skill'));
+      assert.ok(result.stdout.includes('--global'));
+    });
+
+    it('should show help with -h flag', async () => {
+      const result = await runCli(['install-skill', '-h']);
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Usage: githuman install-skill'));
+    });
+
+    it('should install skill to project directory', async (t) => {
+      const installTempDir = createTestRepo(t);
+      const result = await runCli(['install-skill'], { cwd: installTempDir });
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Installed GitHuman skill to'));
+
+      // Verify the file was created
+      const skillPath = join(installTempDir, '.claude', 'skills', 'githuman', 'SKILL.md');
+      assert.ok(existsSync(skillPath), 'SKILL.md should exist');
+
+      // Verify the content is correct
+      const content = readFileSync(skillPath, 'utf-8');
+      assert.ok(content.includes('name: githuman'), 'Should contain skill frontmatter');
+      assert.ok(content.includes('npx githuman'), 'Should contain npx commands');
+    });
+
+    it('should update skill if already installed', async (t) => {
+      const installTempDir = createTestRepo(t);
+
+      // Install first time
+      const result1 = await runCli(['install-skill'], { cwd: installTempDir });
+      assert.strictEqual(result1.exitCode, 0);
+
+      // Install second time
+      const result2 = await runCli(['install-skill'], { cwd: installTempDir });
+      assert.strictEqual(result2.exitCode, 0);
+      assert.ok(result2.stdout.includes('Skill already installed'));
+      assert.ok(result2.stdout.includes('Updating to latest version'));
+    });
+
+    it('should install skill globally with --global', async (t) => {
+      // Create a temp home directory to avoid polluting real home
+      const fakeHome = mkdtempSync(join(tmpdir(), 'fake-home-'));
+      t.after(() => {
+        rmSync(fakeHome, { recursive: true, force: true });
+      });
+
+      const installTempDir = createTestRepo(t);
+
+      // Run with fake HOME
+      const result = await new Promise<ExecResult>((resolve) => {
+        const child = spawn('node', [CLI_PATH, 'install-skill', '--global'], {
+          env: { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome },
+          cwd: installTempDir,
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        child.on('close', (exitCode) => {
+          resolve({ stdout, stderr, exitCode });
+        });
+      });
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Installed GitHuman skill to'));
+
+      // Verify the file was created in fake home
+      const skillPath = join(fakeHome, '.claude', 'skills', 'githuman', 'SKILL.md');
+      assert.ok(existsSync(skillPath), 'SKILL.md should exist in global location');
     });
   });
 });
