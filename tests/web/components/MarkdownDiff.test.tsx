@@ -82,9 +82,9 @@ describe('MarkdownDiff', () => {
   it('should render with diff view by default', () => {
     render(<MarkdownDiff file={mockFile} />);
 
-    // Should show diff button as active (has bg-blue-600 class)
+    // Should show diff button as active (has accent color)
     const diffButton = screen.getByRole('button', { name: 'Diff' });
-    expect(diffButton.className).toContain('bg-blue-600');
+    expect(diffButton.className).toContain('--gh-accent-primary');
 
     // Should show hunk header
     expect(screen.getByText(/@@ -1,3 \+1,4 @@/)).toBeDefined();
@@ -131,7 +131,7 @@ describe('MarkdownDiff', () => {
     await waitFor(() => {
       // Split mode should show both panes
       const splitButton = screen.getByRole('button', { name: 'Split' });
-      expect(splitButton.className).toContain('bg-blue-600');
+      expect(splitButton.className).toContain('--gh-accent-primary');
     });
   });
 

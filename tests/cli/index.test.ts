@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createTestRepo, createTestRepoWithDb } from './test-utils.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = join(__dirname, '../../src/cli/index.ts');
@@ -49,7 +50,7 @@ describe('CLI', () => {
       const result = await runCli(['--help']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Local Code Reviewer'));
+      assert.ok(result.stdout.includes('GitHuman'));
       assert.ok(result.stdout.includes('Usage:'));
       assert.ok(result.stdout.includes('serve'));
       assert.ok(result.stdout.includes('list'));
@@ -59,14 +60,14 @@ describe('CLI', () => {
       const result = await runCli(['-h']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Local Code Reviewer'));
+      assert.ok(result.stdout.includes('GitHuman'));
     });
 
     it('should show version with --version flag', async () => {
       const result = await runCli(['--version']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('code-review v0.1.0'));
+      assert.ok(result.stdout.includes('githuman v0.1.0'));
     });
 
     it('should show version with -v flag', async () => {
@@ -97,7 +98,7 @@ describe('CLI', () => {
       const result = await runCli(['serve', '--help']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review serve'));
+      assert.ok(result.stdout.includes('Usage: githuman serve'));
       assert.ok(result.stdout.includes('--port'));
       assert.ok(result.stdout.includes('--host'));
       assert.ok(result.stdout.includes('--auth'));
@@ -108,7 +109,7 @@ describe('CLI', () => {
       const result = await runCli(['serve', '-h']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review serve'));
+      assert.ok(result.stdout.includes('Usage: githuman serve'));
     });
   });
 
@@ -128,7 +129,7 @@ describe('CLI', () => {
       const result = await runCli(['list', '--help']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review list'));
+      assert.ok(result.stdout.includes('Usage: githuman list'));
       assert.ok(result.stdout.includes('--status'));
       assert.ok(result.stdout.includes('--json'));
     });
@@ -137,7 +138,7 @@ describe('CLI', () => {
       const result = await runCli(['list', '-h']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review list'));
+      assert.ok(result.stdout.includes('Usage: githuman list'));
     });
 
     it('should show no reviews message when database does not exist', async () => {
@@ -182,7 +183,7 @@ describe('CLI', () => {
       const result = await runCli(['todo', '--help']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review todo'));
+      assert.ok(result.stdout.includes('Usage: githuman todo'));
       assert.ok(result.stdout.includes('add'));
       assert.ok(result.stdout.includes('list'));
       assert.ok(result.stdout.includes('done'));
@@ -193,7 +194,7 @@ describe('CLI', () => {
       const result = await runCli(['todo', '-h']);
 
       assert.strictEqual(result.exitCode, 0);
-      assert.ok(result.stdout.includes('Usage: code-review todo'));
+      assert.ok(result.stdout.includes('Usage: githuman todo'));
     });
 
     it('should show no todos message when database does not exist', async () => {
@@ -288,6 +289,48 @@ describe('CLI', () => {
       assert.ok(result.stdout.includes('Will be completed'));
       assert.ok(result.stdout.includes('[ ]'));
       assert.ok(result.stdout.includes('[x]'));
+    });
+  });
+
+  describe('resolve command', () => {
+    it('should show help with --help flag', async () => {
+      const result = await runCli(['resolve', '--help']);
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Usage: githuman resolve'));
+      assert.ok(result.stdout.includes('review-id'));
+      assert.ok(result.stdout.includes('--json'));
+    });
+
+    it('should show help with -h flag', async () => {
+      const result = await runCli(['resolve', '-h']);
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Usage: githuman resolve'));
+    });
+
+    it('should require review-id', async (t) => {
+      const resolveTempDir = createTestRepo(t);
+      const result = await runCli(['resolve'], { cwd: resolveTempDir });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('review-id is required'));
+    });
+
+    it('should error when review does not exist', async (t) => {
+      const resolveTempDir = await createTestRepoWithDb(t);
+      const result = await runCli(['resolve', 'abc123'], { cwd: resolveTempDir });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('Review not found'));
+    });
+
+    it('should error when no reviews exist for "last"', async (t) => {
+      const resolveTempDir = await createTestRepoWithDb(t);
+      const result = await runCli(['resolve', 'last'], { cwd: resolveTempDir });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('No reviews found'));
     });
   });
 });

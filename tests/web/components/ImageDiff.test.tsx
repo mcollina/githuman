@@ -69,9 +69,9 @@ describe('ImageDiff', () => {
   it('should show side-by-side view by default for modified files', () => {
     render(<ImageDiff file={createMockFile('modified')} />);
 
-    // Side by Side button should be active
+    // Side by Side button should be active (uses accent color)
     const sideBySideButton = screen.getByText('Side by Side');
-    expect(sideBySideButton.className).toContain('bg-blue-600');
+    expect(sideBySideButton.className).toContain('--gh-accent-primary');
 
     // Should show both old and new labels
     expect(screen.getByText('Before')).toBeDefined();
@@ -83,9 +83,9 @@ describe('ImageDiff', () => {
 
     fireEvent.click(screen.getByText('Overlay'));
 
-    // Overlay button should now be active
+    // Overlay button should now be active (uses accent color)
     const overlayButton = screen.getByText('Overlay');
-    expect(overlayButton.className).toContain('bg-blue-600');
+    expect(overlayButton.className).toContain('--gh-accent-primary');
 
     // Should show slider
     expect(screen.getByRole('slider')).toBeDefined();

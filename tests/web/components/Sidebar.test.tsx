@@ -40,7 +40,8 @@ describe('Sidebar', () => {
   it('renders file count', () => {
     render(<Sidebar files={mockFiles} onFileSelect={() => {}} />);
 
-    expect(screen.getByText('Files (3)')).toBeDefined();
+    expect(screen.getByText('Files')).toBeDefined();
+    expect(screen.getByText('(3)')).toBeDefined();
   });
 
   it('renders full file paths', () => {
@@ -80,7 +81,8 @@ describe('Sidebar', () => {
       <Sidebar files={mockFiles} selectedFile="src/app.ts" onFileSelect={() => {}} />
     );
 
-    const selectedButton = container.querySelector('.bg-blue-50');
+    // Check for the selected file styling (uses CSS variable)
+    const selectedButton = container.querySelector('[class*="--gh-bg-surface"]');
     expect(selectedButton).toBeDefined();
   });
 

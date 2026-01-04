@@ -96,7 +96,7 @@ describe('TodoItem', () => {
 
       const item = container.querySelector('[data-testid="todo-item-todo-1"]');
       expect(item?.className).toContain('border-t-2');
-      expect(item?.className).toContain('border-blue-500');
+      expect(item?.className).toContain('--gh-accent-primary');
     });
 
     it('calls onDragStart when drag starts', () => {

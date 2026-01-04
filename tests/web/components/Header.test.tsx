@@ -11,7 +11,8 @@ describe('Header', () => {
   it('renders app title', () => {
     renderWithRouter(<Header />);
 
-    expect(screen.getByText('Code Review')).toBeDefined();
+    expect(screen.getByText('Git')).toBeDefined();
+    expect(screen.getByText('Human')).toBeDefined();
   });
 
   it('renders navigation links', () => {
@@ -45,7 +46,7 @@ describe('Header', () => {
 
     const stagedLink = screen.getByText('Staged Changes').closest('a');
     const reviewsLink = screen.getByText('Reviews').closest('a');
-    const titleLink = screen.getByText('Code Review').closest('a');
+    const titleLink = screen.getByText('Git').closest('a');
 
     expect(stagedLink?.getAttribute('href')).toBe('/staged');
     expect(reviewsLink?.getAttribute('href')).toBe('/');
