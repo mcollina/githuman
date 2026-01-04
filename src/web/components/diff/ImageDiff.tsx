@@ -36,10 +36,10 @@ export function ImageDiff({ file }: ImageDiffProps) {
           <button
             onClick={() => setViewMode('side-by-side')}
             className={cn(
-              'px-3 py-1 text-sm rounded border',
+              'px-3 py-1 text-sm rounded border transition-colors',
               viewMode === 'side-by-side'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
+                : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] border-[var(--gh-border)] hover:bg-[var(--gh-bg-surface)]'
             )}
           >
             Side by Side
@@ -47,10 +47,10 @@ export function ImageDiff({ file }: ImageDiffProps) {
           <button
             onClick={() => setViewMode('overlay')}
             className={cn(
-              'px-3 py-1 text-sm rounded border',
+              'px-3 py-1 text-sm rounded border transition-colors',
               viewMode === 'overlay'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
+                : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] border-[var(--gh-border)] hover:bg-[var(--gh-bg-surface)]'
             )}
           >
             Overlay
@@ -61,7 +61,7 @@ export function ImageDiff({ file }: ImageDiffProps) {
       {/* Added file - show new image */}
       {file.status === 'added' && newImageUrl && (
         <div className="flex flex-col items-center gap-2">
-          <span className="text-sm font-medium text-green-700">New Image</span>
+          <span className="text-sm font-medium text-[var(--gh-diff-add-text)]">New Image</span>
           <ImageWithDimensions src={newImageUrl} alt={`Added: ${filePath}`} />
         </div>
       )}
@@ -69,7 +69,7 @@ export function ImageDiff({ file }: ImageDiffProps) {
       {/* Deleted file - show old image */}
       {file.status === 'deleted' && oldImageUrl && (
         <div className="flex flex-col items-center gap-2">
-          <span className="text-sm font-medium text-red-700">Deleted Image</span>
+          <span className="text-sm font-medium text-[var(--gh-diff-remove-text)]">Deleted Image</span>
           <ImageWithDimensions src={oldImageUrl} alt={`Deleted: ${filePath}`} />
         </div>
       )}
@@ -78,14 +78,14 @@ export function ImageDiff({ file }: ImageDiffProps) {
       {(file.status === 'modified' || file.status === 'renamed') && viewMode === 'side-by-side' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {oldImageUrl && (
-            <div className="flex flex-col items-center gap-2 p-3 bg-red-50 rounded-lg">
-              <span className="text-sm font-medium text-red-700">Before</span>
+            <div className="flex flex-col items-center gap-2 p-3 bg-[var(--gh-diff-remove-bg)] rounded-lg">
+              <span className="text-sm font-medium text-[var(--gh-diff-remove-text)]">Before</span>
               <ImageWithDimensions src={oldImageUrl} alt={`Before: ${filePath}`} />
             </div>
           )}
           {newImageUrl && (
-            <div className="flex flex-col items-center gap-2 p-3 bg-green-50 rounded-lg">
-              <span className="text-sm font-medium text-green-700">After</span>
+            <div className="flex flex-col items-center gap-2 p-3 bg-[var(--gh-diff-add-bg)] rounded-lg">
+              <span className="text-sm font-medium text-[var(--gh-diff-add-text)]">After</span>
               <ImageWithDimensions src={newImageUrl} alt={`After: ${filePath}`} />
             </div>
           )}
@@ -99,16 +99,16 @@ export function ImageDiff({ file }: ImageDiffProps) {
             <img
               src={oldImageUrl}
               alt={`Before: ${filePath}`}
-              className="max-w-full h-auto border border-gray-200 rounded"
+              className="max-w-full h-auto border border-[var(--gh-border)] rounded"
             />
             <img
               src={newImageUrl}
               alt={`After: ${filePath}`}
-              className="absolute inset-0 max-w-full h-auto border border-gray-200 rounded"
+              className="absolute inset-0 max-w-full h-auto border border-[var(--gh-border)] rounded"
               style={{ opacity: overlayOpacity }}
             />
           </div>
-          <div className="flex items-center gap-3 text-sm text-gray-600">
+          <div className="flex items-center gap-3 text-sm text-[var(--gh-text-secondary)]">
             <span>Before</span>
             <input
               type="range"
@@ -138,7 +138,7 @@ function ImageWithDimensions({ src, alt }: { src: string; alt: string }) {
 
   if (error) {
     return (
-      <div className="p-4 text-center text-gray-500 bg-gray-100 rounded">
+      <div className="p-4 text-center text-[var(--gh-text-muted)] bg-[var(--gh-bg-secondary)] rounded">
         Failed to load image
       </div>
     );
@@ -149,12 +149,12 @@ function ImageWithDimensions({ src, alt }: { src: string; alt: string }) {
       <img
         src={src}
         alt={alt}
-        className="max-w-full h-auto border border-gray-200 rounded"
+        className="max-w-full h-auto border border-[var(--gh-border)] rounded"
         onLoad={handleLoad}
         onError={() => setError(true)}
       />
       {dimensions && (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-[var(--gh-text-muted)]">
           {dimensions.width} x {dimensions.height} px
         </span>
       )}

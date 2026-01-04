@@ -60,8 +60,8 @@ export function FullFileView({ filePath, hunks, allowComments = false, onLineCli
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+      <div className="p-4 text-center text-[var(--gh-text-muted)]">
+        <div className="gh-spinner w-5 h-5 mx-auto mb-2"></div>
         Loading file...
       </div>
     );
@@ -69,7 +69,7 @@ export function FullFileView({ filePath, hunks, allowComments = false, onLineCli
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-600">
+      <div className="p-4 text-center text-[var(--gh-error)]">
         {error}
       </div>
     );
@@ -121,15 +121,15 @@ function FullFileLine({ lineNumber, content, changeType, filePath, allowComments
   const isAddingComment = commentContext?.activeCommentLine === lineKey;
 
   const bgClass = {
-    added: 'bg-green-50 border-l-4 border-green-400',
-    removed: 'bg-red-50 border-l-4 border-red-400',
-    context: 'bg-white border-l-4 border-transparent',
+    added: 'bg-[var(--gh-diff-add-bg)] border-l-4 border-[var(--gh-diff-add-accent)]',
+    removed: 'bg-[var(--gh-diff-remove-bg)] border-l-4 border-[var(--gh-diff-remove-accent)]',
+    context: 'bg-[var(--gh-bg-primary)] border-l-4 border-transparent',
   }[lineType];
 
   const textClass = {
-    added: 'text-green-800',
-    removed: 'text-red-800',
-    context: 'text-gray-800',
+    added: 'text-[var(--gh-diff-add-text)]',
+    removed: 'text-[var(--gh-diff-remove-text)]',
+    context: 'text-[var(--gh-text-primary)]',
   }[lineType];
 
   const isClickable = allowComments || onLineClick;
@@ -165,7 +165,7 @@ function FullFileLine({ lineNumber, content, changeType, filePath, allowComments
         className={cn(
           'flex font-mono text-sm group relative min-w-max',
           bgClass,
-          isClickable && !isAddingComment && 'cursor-pointer hover:bg-blue-50/50'
+          isClickable && !isAddingComment && 'cursor-pointer hover:bg-[var(--gh-bg-surface)]'
         )}
         onClick={handleLineClick}
         role={isClickable ? 'button' : undefined}
@@ -173,7 +173,7 @@ function FullFileLine({ lineNumber, content, changeType, filePath, allowComments
         onKeyDown={isClickable ? (e) => e.key === 'Enter' && handleLineClick() : undefined}
       >
         {/* Single line number for full file view */}
-        <span className="w-14 px-2 py-0.5 text-right text-gray-400 select-none bg-gray-50 border-r border-gray-200 shrink-0">
+        <span className="w-14 px-2 py-0.5 text-right text-[var(--gh-text-muted)] select-none bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] shrink-0">
           {lineNumber}
         </span>
         <pre className={cn('flex-1 py-0.5 px-4 whitespace-pre', textClass)}>
@@ -189,12 +189,12 @@ function FullFileLine({ lineNumber, content, changeType, filePath, allowComments
 
         {/* Change indicator */}
         {changeType === 'added' && (
-          <span className="absolute left-16 top-0 bottom-0 w-1 bg-green-400" />
+          <span className="absolute left-16 top-0 bottom-0 w-1 bg-[var(--gh-diff-add-accent)]" />
         )}
 
         {/* Comment count badge */}
         {lineComments.length > 0 && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs bg-[var(--gh-accent-primary)]/20 text-[var(--gh-accent-primary)] rounded">
             {lineComments.length}
           </span>
         )}
