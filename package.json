@@ -42,6 +42,14 @@
     "staging"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcollina/githuman.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mcollina/githuman/issues"
+  },
+  "homepage": "https://github.com/mcollina/githuman#readme",
   "dependencies": {
     "@fastify/cors": "^10.0.0",
     "@fastify/one-line-logger": "^2.0.2",
