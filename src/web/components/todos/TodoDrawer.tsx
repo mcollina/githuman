@@ -25,8 +25,8 @@ export function TodoDrawer({ isOpen, onClose, reviewId }: TodoDrawerProps) {
       <aside
         data-testid="todo-drawer"
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-80 bg-[var(--gh-bg-secondary)] shadow-xl flex flex-col',
-          'transition-transform duration-300 ease-in-out border-l border-[var(--gh-border)]',
+          'fixed inset-y-0 right-0 z-50 w-full sm:w-80 bg-[var(--gh-bg-secondary)] shadow-xl flex flex-col',
+          'transition-transform duration-300 ease-in-out sm:border-l border-[var(--gh-border)]',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >

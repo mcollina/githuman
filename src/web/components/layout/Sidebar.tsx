@@ -198,8 +198,8 @@ export function Sidebar({ files, selectedFile, onFileSelect, selectedIndex, show
         {/* Slide-out drawer */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-50 w-72 bg-[var(--gh-bg-secondary)] shadow-xl flex flex-col',
-            'transition-transform duration-300 ease-in-out border-r border-[var(--gh-border)]',
+            'fixed inset-0 z-50 bg-[var(--gh-bg-secondary)] shadow-xl flex flex-col',
+            'transition-transform duration-300 ease-in-out',
             isOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
