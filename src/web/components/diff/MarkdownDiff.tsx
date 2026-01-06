@@ -4,6 +4,8 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { cn } from '../../lib/utils';
 import { DiffHunk } from './DiffHunk';
 import { diffApi, type FileContent } from '../../api/diff';
@@ -200,6 +202,7 @@ function PreviewContent({ content, loading, error }: PreviewContentProps) {
     <div className="p-4 sm:p-6 prose prose-sm prose-invert max-w-none overflow-x-auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={{
           // Style code blocks
           pre: ({ children }) => (

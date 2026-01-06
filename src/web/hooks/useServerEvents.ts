@@ -41,7 +41,7 @@ export function useServerEvents({
   const eventSourceRef = useRef<EventSource | null>(null);
   const onEventRef = useRef(onEvent);
   const eventTypesRef = useRef(eventTypes);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const enabledRef = useRef(enabled);
 
   // Keep refs updated without causing re-renders

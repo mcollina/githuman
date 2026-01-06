@@ -184,4 +184,97 @@ describe('MarkdownDiff', () => {
     // Should only have called API once (cached)
     expect(mockDiffApi.getFileContent).toHaveBeenCalledTimes(1);
   });
+
+  describe('HTML rendering', () => {
+    it('should render safe HTML elements', async () => {
+      mockDiffApi.getFileContent.mockResolvedValue({
+        filePath: 'README.md',
+        lines: [
+          '# Test',
+          '',
+          '<details>',
+          '<summary>Click to expand</summary>',
+          'Hidden content',
+          '</details>',
+        ],
+      });
+
+      render(<MarkdownDiff file={mockFile} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+      await waitFor(() => {
+        // Details/summary should be rendered
+        expect(screen.getByText('Click to expand')).toBeDefined();
+        expect(screen.getByText('Hidden content')).toBeDefined();
+      });
+    });
+
+    it('should render kbd elements', async () => {
+      mockDiffApi.getFileContent.mockResolvedValue({
+        filePath: 'README.md',
+        lines: ['Press <kbd>Ctrl</kbd> + <kbd>C</kbd>'],
+      });
+
+      render(<MarkdownDiff file={mockFile} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+      await waitFor(() => {
+        const kbdElements = document.querySelectorAll('kbd');
+        expect(kbdElements.length).toBe(2);
+      });
+    });
+
+    it('should sanitize script tags', async () => {
+      mockDiffApi.getFileContent.mockResolvedValue({
+        filePath: 'README.md',
+        lines: ["# Test", "<script>alert('XSS')</script>", 'Safe text'],
+      });
+
+      render(<MarkdownDiff file={mockFile} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+      await waitFor(() => {
+        // Safe content should render
+        expect(screen.getByText('Safe text')).toBeDefined();
+        // Script tag should not exist
+        expect(document.querySelector('script')).toBeNull();
+      });
+    });
+
+    it('should sanitize javascript: links', async () => {
+      mockDiffApi.getFileContent.mockResolvedValue({
+        filePath: 'README.md',
+        lines: ["<a href=\"javascript:alert('XSS')\">Click me</a>"],
+      });
+
+      render(<MarkdownDiff file={mockFile} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+      await waitFor(() => {
+        const link = screen.getByText('Click me');
+        expect(link).toBeDefined();
+        // href should be sanitized (removed or empty)
+        const href = link.getAttribute('href');
+        expect(href === null || href === '' || !href.includes('javascript')).toBe(true);
+      });
+    });
+
+    it('should sanitize onerror attributes', async () => {
+      mockDiffApi.getFileContent.mockResolvedValue({
+        filePath: 'README.md',
+        lines: ["<img src=\"x\" onerror=\"alert('XSS')\">"],
+      });
+
+      render(<MarkdownDiff file={mockFile} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+      await waitFor(() => {
+        const img = document.querySelector('img');
+        // Image might exist but onerror should be removed
+        if (img) {
+          expect(img.getAttribute('onerror')).toBeNull();
+        }
+      });
+    });
+  });
 });
