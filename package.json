@@ -30,6 +30,10 @@
     "lint:fix": "eslint src tests --fix",
     "prepublishOnly": "npm run build && npm run typecheck && npm test"
   },
+  "pre-commit": [
+    "typecheck",
+    "lint"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
@@ -81,6 +85,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@fastify/pre-commit": "^2.2.1",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/dom": "^10.4.1",
