@@ -130,6 +130,8 @@ export function DiffLine({ line, filePath, showLineNumbers = true, allowComments
         <CommentForm
           onSubmit={handleSubmitComment}
           onCancel={handleCancelComment}
+          lineContent={line.content}
+          lineNumber={lineNumber}
         />
       )}
     </div>
