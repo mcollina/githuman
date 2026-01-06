@@ -2,6 +2,8 @@
  * Git service - handles all git operations
  */
 import { simpleGit, type SimpleGit } from 'simple-git'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { requestContext } from '../app.ts'
 import type { RepositoryInfo } from '../../shared/types.ts'
 
@@ -257,9 +259,43 @@ export class GitService {
 
   /**
    * Get unified diff for all unstaged (working tree) changes
+   * Includes both tracked file changes and new untracked files
    */
   async getUnstagedDiff (): Promise<string> {
+    // Get regular diff for tracked files
     const diff = await this.git.diff()
+
+    // Get untracked files and generate diff for them
+    const status = await this.git.status()
+    const untrackedDiffs: string[] = []
+
+    for (const filePath of status.not_added) {
+      try {
+        const fullPath = join(this.repoPath, filePath)
+        const content = await readFile(fullPath, 'utf-8')
+        const lines = content.split('\n')
+
+        // Generate unified diff format for new file
+        const diffHeader = [
+          `diff --git a/${filePath} b/${filePath}`,
+          'new file mode 100644',
+          '--- /dev/null',
+          `+++ b/${filePath}`,
+          `@@ -0,0 +1,${lines.length} @@`,
+        ]
+
+        const diffLines = lines.map(line => `+${line}`)
+        untrackedDiffs.push([...diffHeader, ...diffLines].join('\n'))
+      } catch {
+        // Skip files that can't be read (binary, permission issues, etc.)
+      }
+    }
+
+    // Combine tracked changes with untracked file diffs
+    if (untrackedDiffs.length > 0) {
+      return diff + '\n' + untrackedDiffs.join('\n')
+    }
+
     return diff
   }
 

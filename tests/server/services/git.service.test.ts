@@ -267,6 +267,20 @@ describe('git.service', () => {
       assert.ok(diff.includes('-# Test'))
       assert.ok(diff.includes('+# Updated content'))
     })
+
+    it('should include untracked files in diff', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      // Create a new untracked file
+      writeFileSync(join(tempDir, 'new-file.txt'), 'line 1\nline 2\n')
+
+      const diff = await testGit.getUnstagedDiff()
+      assert.ok(diff.includes('new-file.txt'), 'should include new file name')
+      assert.ok(diff.includes('new file mode'), 'should indicate new file')
+      assert.ok(diff.includes('+line 1'), 'should show new file content as added')
+      assert.ok(diff.includes('+line 2'), 'should show all lines as added')
+    })
   })
 
   describe('stageFile', () => {
