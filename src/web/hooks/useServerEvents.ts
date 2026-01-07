@@ -5,7 +5,7 @@
 import { useEffect, useRef } from 'react'
 import { getAuthToken } from '../api/client'
 
-export type EventType = 'todos' | 'reviews' | 'comments' | 'connected'
+export type EventType = 'todos' | 'reviews' | 'comments' | 'files' | 'connected'
 
 interface ServerEvent {
   type: EventType;

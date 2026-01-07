@@ -5,6 +5,7 @@ import { DiffView } from '../components/diff/DiffView'
 import { CommentProvider, useCommentContext, getLineKey } from '../contexts/CommentContext'
 import { useStagedDiff, useUnstagedDiff, useGitStaging } from '../hooks/useStagedDiff'
 import { useCreateReview } from '../hooks/useReviews'
+import { useServerEvents } from '../hooks/useServerEvents'
 
 type TabType = 'staged' | 'unstaged'
 
@@ -54,6 +55,15 @@ export function StagedChangesPage () {
   }, [staged, unstaged])
 
   const { stageFiles, stageAll, staging } = useGitStaging(handleStagingSuccess)
+
+  // Listen for file changes and auto-refresh
+  useServerEvents({
+    eventTypes: ['files', 'connected'],
+    onEvent: useCallback(() => {
+      staged.refetch()
+      unstaged.refetch()
+    }, [staged, unstaged]),
+  })
 
   // Auto-switch to staged tab when all files are staged
   useEffect(() => {

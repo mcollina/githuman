@@ -1,13 +1,15 @@
 /**
  * Server-Sent Events (SSE) routes for real-time updates
  * Uses @fastify/sse for SSE handling and mqemitter for local event dispatching
+ * Includes file watching for live unstaged diff updates
  */
 import { Type, type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import MQEmitter, { type Message, type MQEmitter as MQEmitterType } from 'mqemitter'
+import { watch, type FSWatcher } from 'node:fs'
 import { SuccessSchema } from '../schemas/common.ts'
 
 // Event types that can be broadcast
-export type EventType = 'todos' | 'reviews' | 'comments'
+export type EventType = 'todos' | 'reviews' | 'comments' | 'files'
 
 // Extended message type for our events
 interface EventMessage extends Message {
@@ -31,7 +33,7 @@ async function broadcast (emitter: MQEmitterType, eventType: EventType, data?: u
 
 const NotifyBodySchema = Type.Object(
   {
-    type: Type.Union([Type.Literal('todos'), Type.Literal('reviews'), Type.Literal('comments')], {
+    type: Type.Union([Type.Literal('todos'), Type.Literal('reviews'), Type.Literal('comments'), Type.Literal('files')], {
       description: 'Type of resource that changed',
     }),
     action: Type.Optional(
@@ -45,10 +47,74 @@ const NotifyBodySchema = Type.Object(
   { description: 'Notification payload' }
 )
 
+// Debounce helper for file watcher
+function debounce<T extends (...args: unknown[]) => void> (fn: T, ms: number): T {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  return ((...args: unknown[]) => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), ms)
+  }) as T
+}
+
 const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   // Decorate the emitter to the fastify instance
   const emitter = MQEmitter()
   fastify.decorate('eventEmitter', emitter)
+
+  // Set up file watcher for live updates
+  let fileWatcher: FSWatcher | null = null
+  const repoPath = fastify.config.repositoryPath
+
+  // Debounced broadcast to avoid flooding on rapid file changes
+  const broadcastFileChange = debounce(() => {
+    broadcast(emitter, 'files', { action: 'updated' })
+    fastify.log.debug('File change detected, broadcasting event')
+  }, 300)
+
+  // Start watching when we have connected clients
+  const startWatching = () => {
+    if (fileWatcher) return
+
+    try {
+      fileWatcher = watch(repoPath, { recursive: true }, (eventType, filename) => {
+        // Ignore .git directory and common non-source files
+        if (
+          !filename ||
+          filename.startsWith('.git') ||
+          filename.includes('node_modules') ||
+          filename.endsWith('.log')
+        ) {
+          return
+        }
+        broadcastFileChange()
+      })
+
+      fileWatcher.on('error', (err) => {
+        fastify.log.warn({ err }, 'File watcher error')
+        stopWatching()
+      })
+
+      fastify.log.info({ path: repoPath }, 'File watcher started')
+    } catch (err) {
+      fastify.log.warn({ err }, 'Failed to start file watcher')
+    }
+  }
+
+  const stopWatching = () => {
+    if (fileWatcher) {
+      fileWatcher.close()
+      fileWatcher = null
+      fastify.log.info('File watcher stopped')
+    }
+  }
+
+  // Start watching immediately (could optimize to start only when clients connect)
+  startWatching()
+
+  // Clean up on server close
+  fastify.addHook('onClose', async () => {
+    stopWatching()
+  })
 
   /**
    * GET /api/events
