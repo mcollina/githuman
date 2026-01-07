@@ -1,7 +1,7 @@
 /**
  * Todo panel component - main container for todo list
  */
-import { useState, useCallback, useRef, type DragEvent, type TouchEvent } from 'react'
+import { useState, useCallback, useRef, useEffect, type DragEvent, type TouchEvent } from 'react'
 import { cn } from '../../lib/utils'
 import { TodoItem } from './TodoItem'
 import { TodoInput } from './TodoInput'
@@ -16,8 +16,11 @@ import {
   useReorderTodos,
 } from '../../hooks/useTodos'
 import { useServerEvents } from '../../hooks/useServerEvents'
+import type { Todo } from '../../../shared/types'
 
 type FilterState = 'all' | 'pending' | 'completed'
+
+const PAGE_SIZE = 20
 
 interface TodoPanelProps {
   reviewId?: string;
@@ -28,15 +31,35 @@ export function TodoPanel ({ reviewId, className }: TodoPanelProps) {
   const [filter, setFilter] = useState<FilterState>('all')
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [loadedCount, setLoadedCount] = useState(PAGE_SIZE)
+  const [accumulatedTodos, setAccumulatedTodos] = useState<Todo[]>([])
   const touchStartY = useRef<number>(0)
   const listRef = useRef<HTMLDivElement>(null)
 
+  // For filter/completed views, load all; for 'all' view, paginate
   const filters = filter === 'all'
-    ? { reviewId }
+    ? { reviewId, limit: loadedCount, offset: 0 }
     : { reviewId, completed: filter === 'completed' }
 
-  const { todos, loading, refetch } = useTodos(filters)
+  const { todos: fetchedTodos, total, loading, refetch } = useTodos(filters)
   const { stats, refetch: refetchStats } = useTodoStats()
+
+  // Sync fetched todos to accumulated state
+  useEffect(() => {
+    setAccumulatedTodos(fetchedTodos)
+  }, [fetchedTodos])
+
+  // Reset loaded count when filter changes
+  useEffect(() => {
+    setLoadedCount(PAGE_SIZE)
+  }, [filter, reviewId])
+
+  const todos = accumulatedTodos
+  const hasMore = filter === 'all' && total > loadedCount
+
+  const handleLoadMore = useCallback(() => {
+    setLoadedCount((prev) => prev + PAGE_SIZE)
+  }, [])
   const { create, loading: creating } = useCreateTodo()
   const { update, loading: updating } = useUpdateTodo()
   const { toggle, loading: toggling } = useToggleTodo()
@@ -286,6 +309,22 @@ export function TodoPanel ({ reviewId, className }: TodoPanelProps) {
               </div>
               )}
       </div>
+
+      {/* Load more button */}
+      {hasMore && (
+        <div className='p-2 border-t border-[var(--gh-border)]'>
+          <button
+            onClick={handleLoadMore}
+            disabled={loading}
+            className={cn(
+              'w-full py-2 text-xs text-[var(--gh-accent-primary)] hover:bg-[var(--gh-bg-elevated)] rounded-md transition-colors',
+              loading && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            {loading ? 'Loading...' : `Load more (${total - loadedCount} remaining)`}
+          </button>
+        </div>
+      )}
 
       {/* Footer stats */}
       {stats && stats.total > 0 && (

@@ -133,7 +133,16 @@ export class TodoRepository {
     return row ? rowToTodo(row) : null
   }
 
-  findAll (): Todo[] {
+  findAll (options?: { limit?: number; offset?: number }): Todo[] {
+    if (options?.limit !== undefined) {
+      const sql = `
+        SELECT * FROM todos
+        ORDER BY completed ASC, position ASC
+        LIMIT ? OFFSET ?
+      `
+      const rows = this.db.prepare(sql).all(options.limit, options.offset ?? 0) as unknown as TodoRow[]
+      return rows.map(rowToTodo)
+    }
     const rows = this.stmtFindAll.all() as unknown as TodoRow[]
     return rows.map(rowToTodo)
   }

@@ -44,9 +44,10 @@ describe('todo routes', () => {
       })
 
       assert.strictEqual(response.statusCode, 200)
-      const data = JSON.parse(response.payload)
-      assert.ok(Array.isArray(data))
-      assert.strictEqual(data.length, 0)
+      const result = JSON.parse(response.payload)
+      assert.ok(Array.isArray(result.data))
+      assert.strictEqual(result.data.length, 0)
+      assert.strictEqual(result.total, 0)
     })
 
     it('should return all todos', async () => {
@@ -61,8 +62,9 @@ describe('todo routes', () => {
       })
 
       assert.strictEqual(response.statusCode, 200)
-      const data = JSON.parse(response.payload)
-      assert.strictEqual(data.length, 2)
+      const result = JSON.parse(response.payload)
+      assert.strictEqual(result.data.length, 2)
+      assert.strictEqual(result.total, 2)
     })
 
     it('should filter by completed status', async () => {
@@ -77,9 +79,10 @@ describe('todo routes', () => {
       })
 
       assert.strictEqual(response.statusCode, 200)
-      const data = JSON.parse(response.payload)
-      assert.strictEqual(data.length, 1)
-      assert.strictEqual(data[0].completed, true)
+      const result = JSON.parse(response.payload)
+      assert.strictEqual(result.data.length, 1)
+      assert.strictEqual(result.data[0].completed, true)
+      assert.strictEqual(result.total, 1)
     })
 
     it('should filter by review id', async () => {
@@ -94,9 +97,48 @@ describe('todo routes', () => {
       })
 
       assert.strictEqual(response.statusCode, 200)
-      const data = JSON.parse(response.payload)
-      assert.strictEqual(data.length, 1)
-      assert.strictEqual(data[0].reviewId, testReviewId)
+      const result = JSON.parse(response.payload)
+      assert.strictEqual(result.data.length, 1)
+      assert.strictEqual(result.data[0].reviewId, testReviewId)
+      assert.strictEqual(result.total, 1)
+    })
+
+    it('should paginate results', async () => {
+      const db = getDatabase()
+      const todoRepo = new TodoRepository(db)
+      for (let i = 1; i <= 25; i++) {
+        todoRepo.create({ id: `todo-${i}`, content: `Todo ${i}`, completed: false, reviewId: null })
+      }
+
+      // First page
+      const response1 = await app.inject({
+        method: 'GET',
+        url: '/api/todos?limit=10&offset=0',
+      })
+      const result1 = JSON.parse(response1.payload)
+      assert.strictEqual(result1.data.length, 10)
+      assert.strictEqual(result1.total, 25)
+      assert.strictEqual(result1.limit, 10)
+      assert.strictEqual(result1.offset, 0)
+
+      // Second page
+      const response2 = await app.inject({
+        method: 'GET',
+        url: '/api/todos?limit=10&offset=10',
+      })
+      const result2 = JSON.parse(response2.payload)
+      assert.strictEqual(result2.data.length, 10)
+      assert.strictEqual(result2.total, 25)
+      assert.strictEqual(result2.offset, 10)
+
+      // Third page (only 5 remaining)
+      const response3 = await app.inject({
+        method: 'GET',
+        url: '/api/todos?limit=10&offset=20',
+      })
+      const result3 = JSON.parse(response3.payload)
+      assert.strictEqual(result3.data.length, 5)
+      assert.strictEqual(result3.total, 25)
     })
   })
 

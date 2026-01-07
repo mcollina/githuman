@@ -24,6 +24,16 @@ const TodoSchema = Type.Object(
 
 const TodosArraySchema = Type.Array(TodoSchema, { description: 'List of todos' })
 
+const PaginatedTodosSchema = Type.Object(
+  {
+    data: TodosArraySchema,
+    total: Type.Integer({ description: 'Total number of todos matching the filter' }),
+    limit: Type.Union([Type.Integer(), Type.Null()], { description: 'Limit used (null if no pagination)' }),
+    offset: Type.Integer({ description: 'Offset used' }),
+  },
+  { description: 'Paginated list of todos' }
+)
+
 const CreateTodoSchema = Type.Object(
   {
     content: Type.String({ minLength: 1, description: 'Todo content' }),
@@ -44,8 +54,10 @@ const TodoQuerystringSchema = Type.Object(
   {
     reviewId: Type.Optional(Type.String({ description: 'Filter by review ID' })),
     completed: Type.Optional(Type.String({ description: 'Filter by completion status (1, true, 0, false)' })),
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, description: 'Maximum number of todos to return (default: all)' })),
+    offset: Type.Optional(Type.Integer({ minimum: 0, description: 'Number of todos to skip (default: 0)' })),
   },
-  { description: 'Todo list filters' }
+  { description: 'Todo list filters and pagination' }
 )
 
 const TodoStatsSchema = Type.Object(
@@ -103,35 +115,47 @@ const todoRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   /**
    * GET /api/todos
-   * List all todos with optional filtering
+   * List all todos with optional filtering and pagination
    */
   fastify.get('/api/todos', {
     schema: {
       tags: ['todos'],
       summary: 'List all todos',
-      description: 'Retrieve all todos with optional filtering by review ID or completion status',
+      description: 'Retrieve all todos with optional filtering by review ID or completion status, and pagination',
       querystring: TodoQuerystringSchema,
       response: {
-        200: TodosArraySchema,
+        200: PaginatedTodosSchema,
       },
     },
   }, async (request) => {
     const repo = getRepo()
-    const { reviewId, completed } = request.query
+    const { reviewId, completed, limit, offset = 0 } = request.query
+
+    let data: ReturnType<typeof repo.findAll>
+    let total: number
 
     if (reviewId && completed !== undefined) {
-      return repo.findByReviewAndCompleted(reviewId, completed === '1' || completed === 'true')
+      // No pagination for filtered queries - return all matching
+      data = repo.findByReviewAndCompleted(reviewId, completed === '1' || completed === 'true')
+      total = data.length
+    } else if (reviewId) {
+      data = repo.findByReview(reviewId)
+      total = data.length
+    } else if (completed !== undefined) {
+      data = repo.findByCompleted(completed === '1' || completed === 'true')
+      total = data.length
+    } else {
+      // Pagination only applies to unfiltered queries
+      total = repo.countAll()
+      data = repo.findAll(limit ? { limit, offset } : undefined)
     }
 
-    if (reviewId) {
-      return repo.findByReview(reviewId)
+    return {
+      data,
+      total,
+      limit: limit ?? null,
+      offset,
     }
-
-    if (completed !== undefined) {
-      return repo.findByCompleted(completed === '1' || completed === 'true')
-    }
-
-    return repo.findAll()
   })
 
   /**

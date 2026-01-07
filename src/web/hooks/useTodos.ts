@@ -8,6 +8,7 @@ import type { Todo, CreateTodoRequest, UpdateTodoRequest } from '../../shared/ty
 
 interface UseTodosResult {
   todos: Todo[];
+  total: number;
   loading: boolean;
   error: ApiClientError | null;
   refetch: () => Promise<void>;
@@ -22,6 +23,7 @@ interface UseTodoStatsResult {
 
 export function useTodos (filters?: TodoFilters): UseTodosResult {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ApiClientError | null>(null)
 
@@ -29,20 +31,21 @@ export function useTodos (filters?: TodoFilters): UseTodosResult {
     setLoading(true)
     setError(null)
     try {
-      const data = await todosApi.getAll(filters)
-      setTodos(data)
+      const response = await todosApi.getAll(filters)
+      setTodos(response.data)
+      setTotal(response.total)
     } catch (err) {
       setError(err instanceof ApiClientError ? err : new ApiClientError('Unknown error', 500))
     } finally {
       setLoading(false)
     }
-  }, [filters?.reviewId, filters?.completed])
+  }, [filters?.reviewId, filters?.completed, filters?.limit, filters?.offset])
 
   useEffect(() => {
     fetch()
   }, [fetch])
 
-  return { todos, loading, error, refetch: fetch }
+  return { todos, total, loading, error, refetch: fetch }
 }
 
 export function useTodoStats (): UseTodoStatsResult {

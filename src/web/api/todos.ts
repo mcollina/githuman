@@ -13,6 +13,15 @@ export interface TodoStats {
 export interface TodoFilters {
   reviewId?: string;
   completed?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PaginatedTodos {
+  data: Todo[];
+  total: number;
+  limit: number | null;
+  offset: number;
 }
 
 export const todosApi = {
@@ -24,8 +33,14 @@ export const todosApi = {
     if (filters?.completed !== undefined) {
       params.set('completed', filters.completed ? '1' : '0')
     }
+    if (filters?.limit !== undefined) {
+      params.set('limit', String(filters.limit))
+    }
+    if (filters?.offset !== undefined) {
+      params.set('offset', String(filters.offset))
+    }
     const query = params.toString()
-    return api.get<Todo[]>(`/todos${query ? `?${query}` : ''}`)
+    return api.get<PaginatedTodos>(`/todos${query ? `?${query}` : ''}`)
   },
 
   getById: (id: string) =>
