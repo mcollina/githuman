@@ -96,7 +96,7 @@ describe('git routes', () => {
   })
 
   describe('GET /api/git/commits', () => {
-    it('should return array of commits', async () => {
+    it('should return paginated commits response', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/commits',
@@ -105,8 +105,34 @@ describe('git routes', () => {
       assert.strictEqual(response.statusCode, 200)
 
       const body = JSON.parse(response.body)
-      assert.ok(Array.isArray(body))
-      assert.ok(body.length > 0)
+      assert.ok(Array.isArray(body.commits))
+      assert.ok(body.commits.length > 0)
+      assert.ok(typeof body.hasMore === 'boolean')
+    })
+
+    it('should support limit and offset query parameters', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/git/commits?limit=5&offset=0',
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+
+      const body = JSON.parse(response.body)
+      assert.ok(body.commits.length <= 5)
+    })
+
+    it('should support search query parameter', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/git/commits?search=test',
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+
+      const body = JSON.parse(response.body)
+      assert.ok(Array.isArray(body.commits))
+      assert.ok(typeof body.hasMore === 'boolean')
     })
   })
 })

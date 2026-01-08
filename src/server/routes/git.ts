@@ -35,8 +35,18 @@ const CommitInfoSchema = Type.Object(
 )
 
 const CommitsQuerystringSchema = Type.Object({
-  limit: Type.Optional(Type.String({ description: 'Maximum number of commits to return' })),
+  limit: Type.Optional(Type.String({ description: 'Maximum number of commits to return (default: 20)' })),
+  offset: Type.Optional(Type.String({ description: 'Number of commits to skip for pagination (default: 0)' })),
+  search: Type.Optional(Type.String({ description: 'Search commits by message or author' })),
 })
+
+const CommitsResponseSchema = Type.Object(
+  {
+    commits: Type.Array(CommitInfoSchema, { description: 'List of commits' }),
+    hasMore: Type.Boolean({ description: 'Whether there are more commits to load' }),
+  },
+  { description: 'Paginated commits response' }
+)
 
 const StagedStatusSchema = Type.Object(
   {
@@ -153,22 +163,25 @@ const gitRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   /**
    * GET /api/git/commits
-   * List recent commits
+   * List recent commits with pagination and search
    */
   fastify.get('/api/git/commits', {
     schema: {
       tags: ['git'],
       summary: 'List recent commits',
-      description: 'Get a list of recent commits in the repository',
+      description: 'Get a paginated list of commits with optional search filter',
       querystring: CommitsQuerystringSchema,
       response: {
-        200: Type.Array(CommitInfoSchema),
+        200: CommitsResponseSchema,
       },
     },
   }, async (request) => {
     const service = getService()
     const limit = request.query.limit ? parseInt(request.query.limit, 10) : 20
-    return service.getCommits(limit)
+    const offset = request.query.offset ? parseInt(request.query.offset, 10) : 0
+    const search = request.query.search || undefined
+
+    return service.getCommits({ limit, offset, search })
   })
 
   /**

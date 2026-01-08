@@ -474,11 +474,39 @@ export class GitService {
   }
 
   /**
-   * Get recent commits
+   * Sanitize search input to prevent regex injection
+   * Only allows alphanumeric characters, spaces, and basic punctuation
    */
-  async getCommits (limit: number = 20): Promise<CommitInfo[]> {
-    // Use raw() to get properly formatted output since log() doesn't parse custom formats well
-    const rawLog = await this.git.raw(['log', `-${limit}`, '--format=%H|%s|%an|%ai'])
+  private sanitizeSearch (search: string): string {
+    // Limit length and remove potentially dangerous regex characters
+    // Allow: alphanumeric, spaces, hyphens, underscores, dots, and common punctuation
+    const sanitized = search
+      .slice(0, 100) // Limit length
+      .replace(/[^\w\s\-_.,'":;!?@#]/g, '') // Remove special chars except safe ones
+    return sanitized
+  }
+
+  /**
+   * Get recent commits with pagination and search
+   */
+  async getCommits (options: GetCommitsOptions = {}): Promise<GetCommitsResult> {
+    const { limit = 20, offset = 0, search } = options
+
+    // Build git log arguments
+    const args = ['log', `--skip=${offset}`, `-${limit + 1}`, '--format=%H|%s|%an|%ai']
+
+    // Add search filter if provided (searches commit message)
+    if (search) {
+      const sanitizedSearch = this.sanitizeSearch(search)
+      if (sanitizedSearch) {
+        // Use --fixed-strings for literal matching (prevents regex interpretation)
+        // Note: --grep and --author together require BOTH to match (AND logic)
+        // So we only search by message for simplicity
+        args.push(`--grep=${sanitizedSearch}`, '--regexp-ignore-case', '--fixed-strings')
+      }
+    }
+
+    const rawLog = await this.git.raw(args)
     const commits: CommitInfo[] = []
 
     const lines = rawLog.trim().split('\n').filter(line => line.length > 0)
@@ -494,8 +522,28 @@ export class GitService {
       }
     }
 
-    return commits
+    // Check if there are more commits (we fetched limit+1)
+    const hasMore = commits.length > limit
+    if (hasMore) {
+      commits.pop() // Remove the extra commit
+    }
+
+    return {
+      commits,
+      hasMore,
+    }
   }
+}
+
+export interface GetCommitsOptions {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}
+
+export interface GetCommitsResult {
+  commits: CommitInfo[];
+  hasMore: boolean;
 }
 
 export interface StagedFile {

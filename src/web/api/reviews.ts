@@ -123,11 +123,29 @@ export interface CommitInfo {
   date: string;
 }
 
+export interface CommitsResponse {
+  commits: CommitInfo[];
+  hasMore: boolean;
+}
+
+export interface GetCommitsParams {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}
+
 // Git API
 export const gitApi = {
   getInfo: () => api.get<RepositoryInfo>('/git/info'),
   getBranches: () => api.get<BranchInfo[]>('/git/branches'),
-  getCommits: (limit?: number) => api.get<CommitInfo[]>(`/git/commits${limit ? `?limit=${limit}` : ''}`),
+  getCommits: (params: GetCommitsParams = {}) => {
+    const searchParams = new URLSearchParams()
+    if (params.limit) searchParams.set('limit', params.limit.toString())
+    if (params.offset) searchParams.set('offset', params.offset.toString())
+    if (params.search) searchParams.set('search', params.search)
+    const query = searchParams.toString()
+    return api.get<CommitsResponse>(`/git/commits${query ? `?${query}` : ''}`)
+  },
   hasStagedChanges: () => api.get<{ hasStagedChanges: boolean }>('/git/staged'),
   getUnstaged: () => api.get<UnstagedStatusResponse>('/git/unstaged'),
   stageFiles: (files: string[]) => api.post<StageResponse, { files: string[] }>('/git/stage', { files }),

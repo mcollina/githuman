@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { gitApi, type BranchInfo, type CommitInfo } from '../api/reviews'
 import { useCreateReview } from '../hooks/useReviews'
 import { cn } from '../lib/utils'
 
 type ReviewSource = 'staged' | 'branch' | 'commits'
+
+const COMMITS_PAGE_SIZE = 20
 
 export function NewReviewPage () {
   const navigate = useNavigate()
@@ -19,18 +21,55 @@ export function NewReviewPage () {
   const [error, setError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
 
+  // Commit pagination state
+  const [commitSearch, setCommitSearch] = useState('')
+  const [hasMoreCommits, setHasMoreCommits] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [loadingMoreCommits, setLoadingMoreCommits] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Load commits with pagination
+  const loadCommits = useCallback(async (search: string, append = false, currentOffset = 0) => {
+    if (append) {
+      setLoadingMoreCommits(true)
+    } else {
+      setIsSearching(true)
+    }
+
+    try {
+      const result = await gitApi.getCommits({
+        limit: COMMITS_PAGE_SIZE,
+        offset: currentOffset,
+        search: search || undefined,
+      })
+
+      if (append) {
+        setCommits(prev => [...prev, ...result.commits])
+      } else {
+        setCommits(result.commits)
+      }
+      setHasMoreCommits(result.hasMore)
+    } catch (err) {
+      console.error('Failed to load commits:', err)
+    } finally {
+      setLoadingMoreCommits(false)
+      setIsSearching(false)
+    }
+  }, [])
+
   useEffect(() => {
     async function loadData () {
       try {
         setLoading(true)
-        const [staged, branchList, commitList] = await Promise.all([
+        const [staged, branchList, commitsResult] = await Promise.all([
           gitApi.hasStagedChanges(),
           gitApi.getBranches(),
-          gitApi.getCommits(50),
+          gitApi.getCommits({ limit: COMMITS_PAGE_SIZE }),
         ])
         setHasStagedChanges(staged.hasStagedChanges)
         setBranches(branchList)
-        setCommits(commitList)
+        setCommits(commitsResult.commits)
+        setHasMoreCommits(commitsResult.hasMore)
 
         // Default to staged if there are staged changes, otherwise branch
         if (!staged.hasStagedChanges && branchList.length > 0) {
@@ -49,6 +88,21 @@ export function NewReviewPage () {
     }
     loadData()
   }, [])
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadCommits(commitSearch, false, 0)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [commitSearch, loadCommits])
+
+  const handleLoadMore = () => {
+    if (!loadingMoreCommits && hasMoreCommits) {
+      setLoadingMoreCommits(true)
+      loadCommits(commitSearch, true, commits.length)
+    }
+  }
 
   const handleCreateReview = async () => {
     setCreateError(null)
@@ -231,39 +285,83 @@ export function NewReviewPage () {
                 </span>
               )}
             </div>
-            <div className='max-h-80 overflow-y-auto border border-[var(--gh-border)] rounded-lg divide-y divide-[var(--gh-border)]'>
-              {commits.map((commit) => (
-                <button
-                  key={commit.sha}
-                  onClick={() => toggleCommit(commit.sha)}
-                  className={cn(
-                    'w-full p-3 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-3 transition-colors',
-                    selectedCommits.includes(commit.sha) && 'bg-[var(--gh-accent-primary)]/5'
-                  )}
-                >
-                  <div className={cn(
-                    'w-4 h-4 rounded border flex items-center justify-center mt-0.5 transition-colors',
-                    selectedCommits.includes(commit.sha)
-                      ? 'border-[var(--gh-accent-primary)] bg-[var(--gh-accent-primary)]'
-                      : 'border-[var(--gh-border)]'
-                  )}
-                  >
-                    {selectedCommits.includes(commit.sha) && (
-                      <svg className='w-3 h-3 text-[var(--gh-bg-primary)]' fill='currentColor' viewBox='0 0 20 20'>
-                        <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
-                      </svg>
-                    )}
-                  </div>
-                  <div className='flex-1 min-w-0'>
-                    <div className='flex items-center gap-2'>
-                      <span className='font-mono text-xs text-[var(--gh-accent-primary)]'>{commit.sha.slice(0, 7)}</span>
-                      <span className='text-xs text-[var(--gh-text-muted)]'>{commit.author}</span>
-                    </div>
-                    <div className='text-sm text-[var(--gh-text-primary)] truncate mt-0.5'>{commit.message}</div>
-                  </div>
-                </button>
-              ))}
+
+            {/* Search box */}
+            <div className='mb-3 relative'>
+              <input
+                ref={searchInputRef}
+                type='text'
+                value={commitSearch}
+                onChange={(e) => setCommitSearch(e.target.value)}
+                placeholder='Search commits by message or author...'
+                className='gh-input w-full text-sm'
+              />
+              {isSearching && (
+                <div className='absolute right-3 top-1/2 -translate-y-1/2'>
+                  <div className='gh-spinner w-4 h-4' />
+                </div>
+              )}
             </div>
+
+            <div className='max-h-80 overflow-y-auto border border-[var(--gh-border)] rounded-lg divide-y divide-[var(--gh-border)]'>
+              {commits.length === 0
+                ? (
+                  <div className='p-4 text-center text-[var(--gh-text-muted)] text-sm'>
+                    {isSearching ? 'Searching...' : commitSearch ? 'No commits match your search' : 'No commits found'}
+                  </div>
+                  )
+                : (
+                    commits.map((commit) => (
+                      <button
+                        key={commit.sha}
+                        onClick={() => toggleCommit(commit.sha)}
+                        className={cn(
+                          'w-full p-3 text-left hover:bg-[var(--gh-bg-elevated)] flex items-start gap-3 transition-colors',
+                          selectedCommits.includes(commit.sha) && 'bg-[var(--gh-accent-primary)]/5'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-4 h-4 rounded border flex items-center justify-center mt-0.5 transition-colors',
+                          selectedCommits.includes(commit.sha)
+                            ? 'border-[var(--gh-accent-primary)] bg-[var(--gh-accent-primary)]'
+                            : 'border-[var(--gh-border)]'
+                        )}
+                        >
+                          {selectedCommits.includes(commit.sha) && (
+                            <svg className='w-3 h-3 text-[var(--gh-bg-primary)]' fill='currentColor' viewBox='0 0 20 20'>
+                              <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                            </svg>
+                          )}
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center gap-2'>
+                            <span className='font-mono text-xs text-[var(--gh-accent-primary)]'>{commit.sha.slice(0, 7)}</span>
+                            <span className='text-xs text-[var(--gh-text-muted)]'>{commit.author}</span>
+                          </div>
+                          <div className='text-sm text-[var(--gh-text-primary)] truncate mt-0.5'>{commit.message}</div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+            </div>
+
+            {/* Load more button */}
+            {hasMoreCommits && (
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMoreCommits}
+                className='w-full mt-3 py-2 text-sm text-[var(--gh-accent-primary)] hover:bg-[var(--gh-bg-elevated)] rounded-lg transition-colors disabled:opacity-50'
+              >
+                {loadingMoreCommits
+                  ? (
+                    <span className='flex items-center justify-center gap-2'>
+                      <div className='gh-spinner w-4 h-4' />
+                      Loading...
+                    </span>
+                    )
+                  : 'Load more commits'}
+              </button>
+            )}
           </div>
         )}
 
