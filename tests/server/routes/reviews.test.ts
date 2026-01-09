@@ -24,6 +24,17 @@ function createTempGitRepo (): string {
   return tempDir
 }
 
+/**
+ * Create a temporary git repository WITH staged changes
+ */
+function createTempGitRepoWithStagedChanges (): string {
+  const tempDir = createTempGitRepo()
+  // Add a new file and stage it
+  fs.writeFileSync(path.join(tempDir, 'test-file.ts'), 'const x = 1;\n')
+  execSync('git add test-file.ts', { cwd: tempDir, stdio: 'ignore' })
+  return tempDir
+}
+
 describe('review routes', () => {
   let app: FastifyInstance
   let testDbDir: string
@@ -215,6 +226,192 @@ describe('review routes', () => {
         body.inProgress + body.approved + body.changesRequested,
         body.total
       )
+    })
+  })
+})
+
+describe('review routes with staged changes', () => {
+  let app: FastifyInstance
+  let testDbDir: string
+  let testRepoDir: string
+
+  before(async () => {
+    // Create temp directory for test database
+    testDbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'review-test-staged-'))
+    const dbPath = path.join(testDbDir, 'test.db')
+
+    // Create a git repo WITH staged changes
+    testRepoDir = createTempGitRepoWithStagedChanges()
+
+    // Initialize database
+    initDatabase(dbPath)
+
+    const config = createConfig({
+      repositoryPath: testRepoDir,
+      dbPath,
+    })
+    app = await buildApp(config, { logger: false })
+  })
+
+  after(async () => {
+    await app.close()
+    closeDatabase()
+
+    if (testDbDir) {
+      fs.rmSync(testDbDir, { recursive: true, force: true })
+    }
+    if (testRepoDir) {
+      fs.rmSync(testRepoDir, { recursive: true, force: true })
+    }
+  })
+
+  describe('POST /api/reviews', () => {
+    it('should create a review from staged changes', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        payload: { sourceType: 'staged' },
+      })
+
+      assert.strictEqual(response.statusCode, 201, `Expected 201 but got ${response.statusCode}: ${response.body}`)
+
+      const body = JSON.parse(response.body)
+      assert.ok(body.id, `id should be present. Got keys: ${Object.keys(body).join(', ')}`)
+      assert.strictEqual(body.status, 'in_progress')
+      assert.ok(Array.isArray(body.files), `files should be an array. Got: ${typeof body.files}`)
+      assert.ok(body.files.length > 0, `files should have at least one item. Got: ${body.files?.length}`)
+      assert.ok(body.summary, `summary should be present. Got keys: ${Object.keys(body).join(', ')}`)
+    })
+  })
+
+  describe('review CRUD operations', () => {
+    let reviewId: string
+
+    it('should create a review and get it by ID', async () => {
+      // Create
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        payload: { sourceType: 'staged' },
+      })
+      const created = JSON.parse(createResponse.body)
+      reviewId = created.id
+
+      // Get by ID
+      const getResponse = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}`,
+      })
+
+      assert.strictEqual(getResponse.statusCode, 200)
+      const body = JSON.parse(getResponse.body)
+      assert.strictEqual(body.id, reviewId)
+      assert.ok(Array.isArray(body.files))
+      assert.ok(body.summary)
+    })
+
+    it('should update review status to approved', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/reviews/${reviewId}`,
+        payload: { status: 'approved' },
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.status, 'approved')
+    })
+
+    it('should update review status to changes_requested', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/reviews/${reviewId}`,
+        payload: { status: 'changes_requested' },
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.status, 'changes_requested')
+    })
+
+    it('should export review as markdown', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}/export`,
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const markdown = response.body
+      assert.ok(markdown.includes('# Code Review:'))
+      assert.ok(markdown.includes('Changes Requested'))
+    })
+
+    it('should delete review', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/reviews/${reviewId}`,
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.success, true)
+
+      // Verify it's gone
+      const getResponse = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}`,
+      })
+      assert.strictEqual(getResponse.statusCode, 404)
+    })
+  })
+
+  describe('review filtering and pagination', () => {
+    it('should filter reviews by status', async () => {
+      // Create two reviews
+      await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        payload: { sourceType: 'staged' },
+      })
+
+      const createResponse2 = await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        payload: { sourceType: 'staged' },
+      })
+      const review2 = JSON.parse(createResponse2.body)
+
+      // Approve one
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/reviews/${review2.id}`,
+        payload: { status: 'approved' },
+      })
+
+      // Filter by approved
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/reviews?status=approved',
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      for (const review of body.reviews) {
+        assert.strictEqual(review.status, 'approved')
+      }
+    })
+
+    it('should paginate reviews', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/reviews?page=1&pageSize=5',
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.page, 1)
+      assert.strictEqual(body.pageSize, 5)
+      assert.ok(body.reviews.length <= 5)
     })
   })
 })

@@ -213,6 +213,42 @@ describe('comment routes', () => {
     })
   })
 
+  describe('GET /api/comments/:id', () => {
+    it('should return a comment by ID', async () => {
+      const db = (await import('../../../src/server/db/index.ts')).getDatabase()
+      const commentRepo = new CommentRepository(db)
+      commentRepo.create({
+        id: 'comment-1',
+        reviewId: testReviewId,
+        filePath: 'src/index.ts',
+        lineNumber: 10,
+        lineType: 'added',
+        content: 'Get me by ID',
+        suggestion: null,
+        resolved: false,
+      })
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/comments/comment-1',
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const data = JSON.parse(response.payload)
+      assert.strictEqual(data.id, 'comment-1')
+      assert.strictEqual(data.content, 'Get me by ID')
+    })
+
+    it('should return 404 for non-existent comment', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/comments/non-existent',
+      })
+
+      assert.strictEqual(response.statusCode, 404)
+    })
+  })
+
   describe('PATCH /api/comments/:id', () => {
     it('should update comment content', async () => {
       const db = (await import('../../../src/server/db/index.ts')).getDatabase()
