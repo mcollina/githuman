@@ -40,7 +40,7 @@ Manage todo items for tracking tasks during review.
 Subcommands:
   add <content>          Add a new todo item
   list                   List todos (defaults to pending only)
-  done <id>              Mark todo as completed
+  done <id>              Mark todo as completed (alias: complete)
   undone <id>            Mark todo as not completed
   move <id> <position>   Move todo to a new position (0-indexed)
   remove <id>            Delete a todo
@@ -159,6 +159,7 @@ export async function todoCommand (args: string[]) {
         break
       }
 
+      case 'complete':
       case 'done': {
         const id = positionals[1]
         if (!id) {

@@ -288,6 +288,26 @@ describe('CLI', () => {
       assert.ok(result.stdout.includes('[ ]'))
       assert.ok(result.stdout.includes('[x]'))
     })
+
+    it('should accept "complete" as alias for "done"', async () => {
+      // Add a new todo
+      const addResult = await runCli(['todo', 'add', 'Complete alias test', '--json'], { cwd: todoTempDir })
+      assert.strictEqual(addResult.exitCode, 0)
+      const todoData = JSON.parse(addResult.stdout)
+      const todoId = todoData.id.slice(0, 8)
+
+      // Mark it as done using "complete" alias
+      const completeResult = await runCli(['todo', 'complete', todoId], { cwd: todoTempDir })
+      assert.strictEqual(completeResult.exitCode, 0)
+      assert.ok(completeResult.stdout.includes('Marked as done'))
+      assert.ok(completeResult.stdout.includes('Complete alias test'))
+
+      // Verify it's in the done list
+      const listResult = await runCli(['todo', 'list', '--done'], { cwd: todoTempDir })
+      assert.strictEqual(listResult.exitCode, 0)
+      assert.ok(listResult.stdout.includes('Complete alias test'))
+      assert.ok(listResult.stdout.includes('[x]'))
+    })
   })
 
   describe('resolve command', () => {
