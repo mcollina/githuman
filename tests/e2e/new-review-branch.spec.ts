@@ -65,10 +65,7 @@ test.describe('New Review - Branch Comparison', () => {
     await expect(options).not.toHaveCount(0)
   })
 
-  // Skip: The branch comparison uses targetBranch...HEAD which shows what's in HEAD
-  // that's not in targetBranch. Since we're on main and test-branch was created from main,
-  // there are no changes from test-branch to HEAD. This would need the diff direction reversed.
-  test.skip('should select branch and create review', async ({ page }) => {
+  test('should select branch and create review', async ({ page }) => {
     await page.goto('/new')
 
     // Wait for page to load

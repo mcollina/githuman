@@ -409,10 +409,11 @@ export class GitService {
 
   /**
    * Get diff between current branch and another branch
+   * Shows what's in targetBranch that's not in HEAD (for code review)
    */
   async getBranchDiff (targetBranch: string): Promise<string> {
-    // Get diff from target branch to HEAD (shows what would be merged)
-    const diff = await this.git.diff([`${targetBranch}...HEAD`])
+    // Get diff from HEAD to target branch (shows what's in target branch, not in HEAD)
+    const diff = await this.git.diff([`HEAD...${targetBranch}`])
     return diff
   }
 

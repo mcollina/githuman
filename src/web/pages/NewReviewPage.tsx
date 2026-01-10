@@ -267,7 +267,7 @@ export function NewReviewPage () {
               ))}
             </select>
             <p className='text-xs text-[var(--gh-text-muted)] mt-2'>
-              Shows changes from the selected branch to current HEAD
+              Shows changes in the selected branch that are not in current HEAD
             </p>
           </div>
         )}
