@@ -250,6 +250,38 @@
       font-size: 0.95rem;
     }
 
+    /* Mobile Section */
+    .mobile-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .mobile-section h2 {
+      font-size: 2rem;
+      margin-bottom: 16px;
+    }
+
+    .mobile-tagline {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      margin-bottom: 40px;
+    }
+
+    .mobile-screenshots {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .mobile-screenshot {
+      width: 280px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
     /* Workflow */
     .workflow {
       padding: 80px 0;
@@ -444,6 +476,21 @@
             <h3>Local & Private</h3>
             <p>Everything runs on your machine. No data leaves your computer. No accounts required.</p>
           </div>
+          <div class="feature">
+            <h3>Mobile Ready</h3>
+            <p>Fully responsive interface. Review code on your phone or tablet when you're away from your desk.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mobile-section">
+      <div class="container">
+        <h2>Works beautifully on mobile</h2>
+        <p class="mobile-tagline">Review AI-generated code from anywhere. The interface adapts seamlessly to any screen size.</p>
+        <div class="mobile-screenshots">
+          <img src="mobile-staged.png" alt="GitHuman mobile staged changes view" class="mobile-screenshot">
+          <img src="mobile-review.png" alt="GitHuman mobile review view" class="mobile-screenshot">
         </div>
       </div>
     </section>

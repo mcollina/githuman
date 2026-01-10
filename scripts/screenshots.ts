@@ -79,9 +79,47 @@ export function multiply(a: number, b: number): number {
     await setTimeout(500);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/home.png` });
 
+    // Screenshot 3: Create a review and show the review page with diff
+    console.log('Capturing review page...');
+    // Click Create Review button
+    await page.goto(BASE_URL);
+    await page.waitForSelector('text=Staged');
+    await page.click('text=Create Review');
+    await page.waitForURL(/\/reviews\//);
+    await setTimeout(1500);
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/review.png` });
+
+    // Screenshot 4: New review page with options
+    console.log('Capturing new review page...');
+    await page.goto(`${BASE_URL}/new`);
+    await page.waitForSelector('text=Create New Review');
+    await setTimeout(500);
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/new-review.png` });
+
+    // Screenshot 5: Mobile view of staged changes
+    console.log('Capturing mobile screenshots...');
+    await page.setViewportSize({ width: 390, height: 844 }); // iPhone 14 Pro size
+    await page.goto(BASE_URL);
+    await page.waitForSelector('text=Staged');
+    await setTimeout(1500);
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/mobile-staged.png` });
+
+    // Screenshot 6: Mobile view of review
+    await page.goto(`${BASE_URL}/reviews`);
+    await page.waitForSelector('text=Reviews');
+    // Click first review to open it
+    await page.locator('.gh-card').first().click();
+    await page.waitForURL(/\/reviews\//);
+    await setTimeout(1000);
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/mobile-review.png` });
+
     // Copy screenshots to website folder
     cpSync(`${SCREENSHOT_DIR}/home.png`, 'website/home.png');
     cpSync(`${SCREENSHOT_DIR}/staged-changes.png`, 'website/staged-changes.png');
+    cpSync(`${SCREENSHOT_DIR}/review.png`, 'website/review.png');
+    cpSync(`${SCREENSHOT_DIR}/new-review.png`, 'website/new-review.png');
+    cpSync(`${SCREENSHOT_DIR}/mobile-staged.png`, 'website/mobile-staged.png');
+    cpSync(`${SCREENSHOT_DIR}/mobile-review.png`, 'website/mobile-review.png');
 
     console.log('Screenshots saved to docs/screenshots/ and website/');
   } finally {
