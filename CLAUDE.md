@@ -20,6 +20,19 @@ When renaming or refactoring the project:
 - Always migrate the database file to the new location
 - Never assume the old data directory can be recreated
 
+## TypeScript
+
+This project uses Node.js native TypeScript support (type stripping). **Never use tsx** - always run TypeScript files directly with `node`:
+
+```bash
+# Correct
+node scripts/screenshots.ts
+node src/cli/index.ts serve
+
+# Wrong - do NOT use tsx
+tsx scripts/screenshots.ts  # NO!
+```
+
 ## Build and Development Commands
 
 ```bash
@@ -115,3 +128,19 @@ const repo = new SomeRepository(db);
 ```
 
 Web tests use Vitest with Testing Library.
+
+## Documentation
+
+### Screenshots
+
+To update screenshots for the README and website, run:
+
+```bash
+node scripts/screenshots.ts
+```
+
+This captures screenshots of the home page and staged changes page to `docs/screenshots/` and copies them to `website/` for the landing page.
+
+### Website
+
+The `website/` folder contains the GitHub Pages landing page (`index.html`). It's a standalone static page that describes the project.

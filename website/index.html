@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHuman - Review AI Code Before Commit</title>
+  <meta name="description" content="Review AI agent code changes before commit. A local code review interface for the staging area.">
+  <meta name="keywords" content="code review, git, AI, agent, staging, diff, CLI">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='14' r='5' fill='%2306d6d6'/></svg>">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-elevated: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #06d6d6;
+      --accent-purple: #a855f7;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .logo svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    nav {
+      display: flex;
+      gap: 24px;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    nav a:hover {
+      color: var(--text);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Install command */
+    .install-command {
+      margin-top: 40px;
+    }
+
+    .install-command code {
+      display: inline-block;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 32px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+
+    /* Problem/Solution */
+    .problem-solution {
+      padding: 80px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 48px;
+    }
+
+    .card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+
+    .card.problem h2 {
+      color: #f85149;
+    }
+
+    .card.solution h2 {
+      color: var(--accent);
+    }
+
+    .card p {
+      color: var(--text-secondary);
+    }
+
+    /* Screenshot */
+    .screenshot-section {
+      padding: 40px 0 80px;
+      text-align: center;
+    }
+
+    .screenshot-section h2 {
+      font-size: 1.75rem;
+      margin-bottom: 32px;
+    }
+
+    .screenshot {
+      max-width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .features h2 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .feature {
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .feature h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Workflow */
+    .workflow {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .workflow h2 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .workflow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .workflow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
+      color: var(--bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero {
+        padding: 60px 0 40px;
+      }
+
+      nav {
+        gap: 16px;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="v1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#06d6d6" />
+              <stop offset="100%" stop-color="#a855f7" />
+            </linearGradient>
+          </defs>
+          <path d="M14 8 Q8 8 8 14 L8 20 Q8 24 4 24 Q8 24 8 28 L8 34 Q8 40 14 40"
+                stroke="url(#v1Grad)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+          <path d="M34 8 Q40 8 40 14 L40 20 Q40 24 44 24 Q40 24 40 28 L40 34 Q40 40 34 40"
+                stroke="url(#v1Grad)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+          <circle cx="24" cy="14" r="5" fill="#06d6d6" />
+          <path d="M24 19 L24 30" stroke="#06d6d6" stroke-width="3" stroke-linecap="round" />
+          <path d="M18 25 L24 22 L30 25" stroke="#06d6d6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          <path d="M24 30 L20 38" stroke="#06d6d6" stroke-width="2.5" stroke-linecap="round" />
+          <path d="M24 30 L28 38" stroke="#06d6d6" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+        GitHuman
+      </div>
+      <nav>
+        <a href="https://github.com/mcollina/githuman">GitHub</a>
+        <a href="https://github.com/mcollina/githuman#readme">Docs</a>
+        <a href="https://www.npmjs.com/package/githuman">npm</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h1>Review AI Code Before Commit</h1>
+        <p>GitHub revolutionized how humans collaborate on code. GitHuman defines how humans review code written by AI.</p>
+        <div class="cta-buttons">
+          <a href="https://github.com/mcollina/githuman" class="btn btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            View on GitHub
+          </a>
+          <a href="https://www.npmjs.com/package/githuman" class="btn btn-secondary">
+            npm install -g githuman
+          </a>
+        </div>
+        <div class="install-command">
+          <code>npx githuman serve</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="problem-solution">
+      <div class="container" style="display: contents;">
+        <div class="card problem">
+          <h2>The Problem</h2>
+          <p>AI coding agents write code. But the traditional PR workflow assumes humans are the authors. By the time AI-generated code reaches a pull request, you've already committed to the approach. Review happens too late.</p>
+        </div>
+        <div class="card solution">
+          <h2>The Solution</h2>
+          <p>GitHuman moves the review checkpoint to where it belongs: <strong>the staging area</strong>. Before <code>git commit</code>, you get a proper review interface&mdash;not a wall of terminal diff output.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screenshot-section">
+      <div class="container">
+        <h2>A GitHub-like interface for your staging area</h2>
+        <img src="staged-changes.png" alt="GitHuman staged changes review interface" class="screenshot">
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="container">
+        <h2>Features</h2>
+        <div class="features-grid">
+          <div class="feature">
+            <h3>Visual Diff Review</h3>
+            <p>Review staged changes in a clean, syntax-highlighted interface. No more squinting at terminal output.</p>
+          </div>
+          <div class="feature">
+            <h3>Inline Comments</h3>
+            <p>Add comments to specific lines with optional code suggestions. Track issues before they become commits.</p>
+          </div>
+          <div class="feature">
+            <h3>Review Workflow</h3>
+            <p>Track status: in progress, approved, or changes requested. Make informed decisions about AI output.</p>
+          </div>
+          <div class="feature">
+            <h3>Todo Tracking</h3>
+            <p>Create tasks for follow-up work via CLI or web interface. Keep track of what needs attention.</p>
+          </div>
+          <div class="feature">
+            <h3>Markdown Export</h3>
+            <p>Export reviews with comments for documentation. Keep a record of your review decisions.</p>
+          </div>
+          <div class="feature">
+            <h3>Local & Private</h3>
+            <p>Everything runs on your machine. No data leaves your computer. No accounts required.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workflow">
+      <div class="container">
+        <h2>How It Works</h2>
+        <div class="workflow-steps">
+          <div class="workflow-step">
+            <span class="step-number">1</span>
+            <div class="step-content">
+              <h3>AI agent makes changes</h3>
+              <p>Claude, Copilot, Cursor, or any tool stages code changes</p>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <span class="step-number">2</span>
+            <div class="step-content">
+              <h3>Run <code>githuman serve</code></h3>
+              <p>Opens the review interface in your browser</p>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <span class="step-number">3</span>
+            <div class="step-content">
+              <h3>Review the diff</h3>
+              <p>See exactly what changed, file by file, with syntax highlighting</p>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <span class="step-number">4</span>
+            <div class="step-content">
+              <h3>Add comments & todos</h3>
+              <p>Note issues, questions, or follow-up work</p>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <span class="step-number">5</span>
+            <div class="step-content">
+              <h3>Decide</h3>
+              <p>Approve and commit, or request changes from the agent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/mcollina/githuman">GitHub</a>
+        <a href="https://github.com/mcollina/githuman#readme">Documentation</a>
+        <a href="https://www.npmjs.com/package/githuman">npm</a>
+        <a href="https://github.com/mcollina/githuman/issues">Issues</a>
+      </div>
+      <p>MIT License. Created by <a href="https://github.com/mcollina">Matteo Collina</a>.</p>
+    </div>
+  </footer>
+</body>
+</html>

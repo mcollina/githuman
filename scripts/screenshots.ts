@@ -3,12 +3,13 @@
  */
 import { chromium } from '@playwright/test';
 import { execSync, spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, writeFileSync, unlinkSync, cpSync } from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
 
 const PORT = 4899;
 const BASE_URL = `http://localhost:${PORT}`;
 const SCREENSHOT_DIR = 'docs/screenshots';
+const TEST_FILE = 'screenshot-demo.ts';
 
 async function main() {
   // Ensure screenshot directory exists
@@ -19,6 +20,25 @@ async function main() {
     console.log('Building frontend...');
     execSync('npm run build', { stdio: 'inherit' });
   }
+
+  // Create and stage a demo file for the screenshot
+  console.log('Creating demo staged file...');
+  writeFileSync(TEST_FILE, `/**
+ * Example utility functions
+ */
+export function greet(name: string): string {
+  return \`Hello, \${name}!\`
+}
+
+export function add(a: number, b: number): number {
+  return a + b
+}
+
+export function multiply(a: number, b: number): number {
+  return a * b
+}
+`);
+  execSync(`git add ${TEST_FILE}`);
 
   // Start server
   console.log('Starting server...');
@@ -36,28 +56,46 @@ async function main() {
   });
   const page = await context.newPage();
 
+  // Listen for console messages and errors
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      console.log('Browser error:', msg.text());
+    }
+  });
+  page.on('pageerror', err => console.log('Page error:', err.message));
+
   try {
-    // Screenshot 1: Home page (reviews list)
-    console.log('Capturing home page...');
+    // Screenshot 1: Staged changes page (root route)
+    console.log('Capturing staged changes...');
     await page.goto(BASE_URL);
+    await page.waitForSelector('text=Staged');
+    await setTimeout(1500); // Wait for syntax highlighting
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/staged-changes.png` });
+
+    // Screenshot 2: Reviews list page
+    console.log('Capturing reviews page...');
+    await page.goto(`${BASE_URL}/reviews`);
     await page.waitForSelector('text=Reviews');
     await setTimeout(500);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/home.png` });
 
-    // Screenshot 2: Staged changes page
-    console.log('Capturing staged changes...');
-    await page.goto(`${BASE_URL}/staged`);
-    await page.waitForSelector('aside');
-    await setTimeout(500);
-    await page.screenshot({ path: `${SCREENSHOT_DIR}/staged-changes.png` });
+    // Copy screenshots to website folder
+    cpSync(`${SCREENSHOT_DIR}/home.png`, 'website/home.png');
+    cpSync(`${SCREENSHOT_DIR}/staged-changes.png`, 'website/staged-changes.png');
 
-    // Create a test review if we have staged changes, or show empty state
-    // For demo purposes, we'll just capture what's there
-
-    console.log('Screenshots saved to docs/screenshots/');
+    console.log('Screenshots saved to docs/screenshots/ and website/');
   } finally {
     await browser.close();
     server.kill();
+
+    // Cleanup: unstage and remove test file
+    console.log('Cleaning up...');
+    try {
+      execSync(`git reset HEAD ${TEST_FILE}`, { stdio: 'ignore' });
+    } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_FILE);
+    } catch { /* ignore */ }
   }
 }
 
