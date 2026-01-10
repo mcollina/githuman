@@ -2,6 +2,7 @@
  * Git service - handles all git operations
  */
 import { simpleGit, type SimpleGit } from 'simple-git'
+import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { requestContext } from '../app.ts'
@@ -386,8 +387,14 @@ export class GitService {
    */
   async getStagedBinaryContent (filePath: string): Promise<Buffer | null> {
     try {
-      const result = await this.git.raw(['show', `:${filePath}`])
-      return Buffer.from(result, 'binary')
+      // Use execFileSync to get raw binary output - simple-git's raw() returns a string
+      // which corrupts binary data. execFileSync with array args avoids shell injection.
+      const result = execFileSync('git', ['show', `:${filePath}`], {
+        cwd: this.repoPath,
+        encoding: 'buffer',
+        maxBuffer: 50 * 1024 * 1024, // 50MB max
+      })
+      return result
     } catch (err) {
       this.log?.debug({ err, filePath }, 'getStagedBinaryContent failed')
       return null
@@ -399,8 +406,14 @@ export class GitService {
    */
   async getHeadBinaryContent (filePath: string): Promise<Buffer | null> {
     try {
-      const result = await this.git.raw(['show', `HEAD:${filePath}`])
-      return Buffer.from(result, 'binary')
+      // Use execFileSync to get raw binary output - simple-git's raw() returns a string
+      // which corrupts binary data. execFileSync with array args avoids shell injection.
+      const result = execFileSync('git', ['show', `HEAD:${filePath}`], {
+        cwd: this.repoPath,
+        encoding: 'buffer',
+        maxBuffer: 50 * 1024 * 1024, // 50MB max
+      })
+      return result
     } catch (err) {
       this.log?.debug({ err, filePath }, 'getHeadBinaryContent failed')
       return null
