@@ -6,7 +6,9 @@
 
 **Review AI agent code changes before commit.**
 
-GitHub revolutionized how humans collaborate on code. GitHuman defines how humans review code written by AI.
+GitHub revolutionized how humans collaborate on code.
+
+GitHuman defines how humans review code written by AI.
 
 ## The Problem
 
