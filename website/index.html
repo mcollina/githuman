@@ -166,9 +166,18 @@
     /* Problem/Solution */
     .problem-solution {
       padding: 80px 0;
+    }
+
+    .problem-solution .container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 48px;
+    }
+
+    @media (max-width: 768px) {
+      .problem-solution .container {
+        grid-template-columns: 1fr;
+      }
     }
 
     .card {
@@ -429,7 +438,7 @@
     </section>
 
     <section class="problem-solution">
-      <div class="container" style="display: contents;">
+      <div class="container">
         <div class="card problem">
           <h2>The Problem</h2>
           <p>AI coding agents write code. But the traditional PR workflow assumes humans are the authors. By the time AI-generated code reaches a pull request, you've already committed to the approach. Review happens too late.</p>
@@ -547,7 +556,7 @@
         <a href="https://www.npmjs.com/package/githuman">npm</a>
         <a href="https://github.com/mcollina/githuman/issues">Issues</a>
       </div>
-      <p>MIT License. Created by <a href="https://github.com/mcollina">Matteo Collina</a>.</p>
+      <p>MIT License. Created by <a href="https://nodeland.dev/">Matteo Collina</a>.</p>
     </div>
   </footer>
 </body>
