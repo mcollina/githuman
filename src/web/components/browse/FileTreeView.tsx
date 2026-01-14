@@ -12,6 +12,8 @@ interface FileTreeViewProps {
   filesWithComments?: Set<string>;
   browseMode?: boolean;
   onBrowseModeChange?: (enabled: boolean) => void;
+  mobileDrawerOpen?: boolean;
+  onMobileDrawerChange?: (open: boolean) => void;
 }
 
 interface TreeNodeProps {
@@ -107,11 +109,15 @@ function TreeNode ({ node, selectedFile, expandedFolders, onToggleFolder, onFile
   )
 }
 
-export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, filesWithComments, browseMode, onBrowseModeChange }: FileTreeViewProps) {
+export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, filesWithComments, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: FileTreeViewProps) {
   const [filter, setFilter] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-  const [isOpen, setIsOpen] = useState(false)
+  const [localIsOpen, setLocalIsOpen] = useState(false)
   const isMobile = useIsMobile()
+
+  // Use external state if provided, otherwise use local state
+  const isOpen = mobileDrawerOpen ?? localIsOpen
+  const setIsOpen = onMobileDrawerChange ?? setLocalIsOpen
 
   // Auto-expand folders containing changed files or files with comments
   useEffect(() => {
@@ -144,7 +150,7 @@ export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, files
     if (!isMobile) {
       setIsOpen(false)
     }
-  }, [isMobile])
+  }, [isMobile, setIsOpen])
 
   const handleFileSelect = (path: string) => {
     onFileSelect(path)

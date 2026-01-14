@@ -75,13 +75,15 @@ function InitialLineSelector () {
   return null
 }
 
-function FileTreeWithComments ({ tree, selectedFile, onFileSelect, loading, browseMode, onBrowseModeChange }: {
+function FileTreeWithComments ({ tree, selectedFile, onFileSelect, loading, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: {
   tree: import('../../shared/types').FileTreeNode[];
   selectedFile: string | null;
   onFileSelect: (path: string) => void;
   loading?: boolean;
   browseMode?: boolean;
   onBrowseModeChange?: (enabled: boolean) => void;
+  mobileDrawerOpen?: boolean;
+  onMobileDrawerChange?: (open: boolean) => void;
 }) {
   const { comments } = useCommentContext()
 
@@ -103,6 +105,8 @@ function FileTreeWithComments ({ tree, selectedFile, onFileSelect, loading, brow
       filesWithComments={filesWithComments}
       browseMode={browseMode}
       onBrowseModeChange={onBrowseModeChange}
+      mobileDrawerOpen={mobileDrawerOpen}
+      onMobileDrawerChange={onMobileDrawerChange}
     />
   )
 }
@@ -146,6 +150,7 @@ export function ReviewPage () {
   // Browse mode state
   const [browseMode, setBrowseMode] = useState(false)
   const [browseSelectedFile, setBrowseSelectedFile] = useState<string | null>(null)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   // Compute ref for browse mode
   const browseRef = useMemo(() => {
@@ -272,6 +277,8 @@ export function ReviewPage () {
                   setBrowseSelectedFile(null)
                 }
               }}
+              mobileDrawerOpen={mobileDrawerOpen}
+              onMobileDrawerChange={setMobileDrawerOpen}
             />
             )
           : (
@@ -291,6 +298,8 @@ export function ReviewPage () {
                   setBrowseSelectedFile(null)
                 }
               }}
+              mobileDrawerOpen={mobileDrawerOpen}
+              onMobileDrawerChange={setMobileDrawerOpen}
             />
             )}
         <div className='flex-1 flex flex-col min-w-0'>

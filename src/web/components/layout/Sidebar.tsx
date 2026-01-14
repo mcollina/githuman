@@ -13,6 +13,8 @@ interface SidebarProps {
   staging?: boolean;
   browseMode?: boolean;
   onBrowseModeChange?: (enabled: boolean) => void;
+  mobileDrawerOpen?: boolean;
+  onMobileDrawerChange?: (open: boolean) => void;
 }
 
 function getStatusColor (status: DiffFile['status']) {
@@ -45,17 +47,21 @@ function getStatusLabel (status: DiffFile['status']) {
   }
 }
 
-export function Sidebar ({ files, selectedFile, onFileSelect, selectedIndex, showStageButtons, onStageFile, staging, browseMode, onBrowseModeChange }: SidebarProps) {
+export function Sidebar ({ files, selectedFile, onFileSelect, selectedIndex, showStageButtons, onStageFile, staging, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: SidebarProps) {
   const [filter, setFilter] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
+  const [localIsOpen, setLocalIsOpen] = useState(false)
   const isMobile = useIsMobile()
+
+  // Use external state if provided, otherwise use local state
+  const isOpen = mobileDrawerOpen ?? localIsOpen
+  const setIsOpen = onMobileDrawerChange ?? setLocalIsOpen
 
   // Close sidebar when switching to desktop
   useEffect(() => {
     if (!isMobile) {
       setIsOpen(false)
     }
-  }, [isMobile])
+  }, [isMobile, setIsOpen])
 
   // Close sidebar when file is selected on mobile
   const handleFileSelect = (path: string) => {
