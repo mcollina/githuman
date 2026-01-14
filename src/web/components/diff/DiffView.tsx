@@ -35,11 +35,6 @@ export function DiffView ({ files, summary, selectedFile, forceExpandedFile, all
     )
   }
 
-  // If a file is selected, scroll to it
-  const filesToShow = selectedFile
-    ? files.filter((f) => (f.newPath || f.oldPath) === selectedFile)
-    : files
-
   return (
     <div className='flex-1 overflow-y-auto p-4 min-w-0'>
       {summary && (
@@ -71,14 +66,16 @@ export function DiffView ({ files, summary, selectedFile, forceExpandedFile, all
       )}
 
       <div className='space-y-4'>
-        {filesToShow.map((file) => {
+        {files.map((file) => {
           const filePath = file.newPath || file.oldPath
+          // Force expand if this file is selected or explicitly forced
+          const shouldForceExpand = selectedFile === filePath || forceExpandedFile === filePath
           return (
             <DiffFile
               key={filePath}
               file={file}
-              defaultExpanded={filesToShow.length <= 5}
-              forceExpanded={forceExpandedFile === filePath}
+              defaultExpanded={files.length <= 5}
+              forceExpanded={shouldForceExpand}
               allowComments={allowComments}
               onLineClick={onLineClick}
             />

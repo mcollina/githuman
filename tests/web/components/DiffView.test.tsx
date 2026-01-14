@@ -73,11 +73,12 @@ describe('DiffView', () => {
     expect(screen.getByText('1 modified')).toBeDefined()
   })
 
-  it('filters to selected file when provided', () => {
+  it('shows all files when one is selected (does not filter)', () => {
     renderWithProvider(<DiffView files={mockFiles} selectedFile='file1.ts' />)
 
+    // Both files should be visible - selecting just force-expands, doesn't filter
     expect(screen.getByText('file1.ts')).toBeDefined()
-    expect(screen.queryByText('file2.ts')).toBeNull()
+    expect(screen.getByText('file2.ts')).toBeDefined()
   })
 
   it('shows all files when no selection', () => {

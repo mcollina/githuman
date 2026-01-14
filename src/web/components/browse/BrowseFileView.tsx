@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '../../lib/utils'
 import { useCommentContext, getLineKey } from '../../contexts/CommentContext'
 import { useHighlighterContext } from '../../contexts/HighlighterContext'
 import { LineComment } from '../diff/LineComment'
 import { CommentForm } from '../diff/CommentForm'
+import { MarkdownPreview, isMarkdownFile } from '../diff/MarkdownPreview'
 import { useFileContent } from '../../hooks/useFileTree'
 
 interface BrowseFileViewProps {
@@ -13,9 +14,18 @@ interface BrowseFileViewProps {
   allowComments?: boolean;
 }
 
+type ViewMode = 'source' | 'preview'
+
 export function BrowseFileView ({ filePath, ref, isChangedFile = false, allowComments = true }: BrowseFileViewProps) {
   const { content, lines, isBinary, loading, error } = useFileContent(filePath, ref)
   const highlighter = useHighlighterContext()
+  const isMarkdown = isMarkdownFile(filePath)
+  const [viewMode, setViewMode] = useState<ViewMode>(isMarkdown ? 'preview' : 'source')
+
+  // Reset view mode when file changes
+  useEffect(() => {
+    setViewMode(isMarkdown ? 'preview' : 'source')
+  }, [filePath, isMarkdown])
 
   // Trigger highlighting when file content is loaded
   useEffect(() => {
@@ -71,21 +81,55 @@ export function BrowseFileView ({ filePath, ref, isChangedFile = false, allowCom
         {isChangedFile && (
           <span className='gh-badge gh-badge-warning shrink-0'>Changed</span>
         )}
+        {isMarkdown && (
+          <div className='flex rounded-lg border border-[var(--gh-border)] overflow-hidden ml-2'>
+            <button
+              type='button'
+              onClick={() => setViewMode('source')}
+              className={cn(
+                'px-3 py-1 text-xs transition-colors',
+                viewMode === 'source'
+                  ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)]'
+                  : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)]'
+              )}
+            >
+              Source
+            </button>
+            <button
+              type='button'
+              onClick={() => setViewMode('preview')}
+              className={cn(
+                'px-3 py-1 text-xs border-l border-[var(--gh-border)] transition-colors',
+                viewMode === 'preview'
+                  ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)]'
+                  : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:bg-[var(--gh-bg-surface)]'
+              )}
+            >
+              Preview
+            </button>
+          </div>
+        )}
         <span className='text-sm text-[var(--gh-text-muted)] ml-auto'>{lines.length} lines</span>
       </div>
 
       {/* File content */}
-      <div className='font-mono text-sm min-w-max'>
-        {lines.map((lineContent, index) => (
-          <BrowseLine
-            key={index}
-            lineNumber={index + 1}
-            content={lineContent}
-            filePath={filePath}
-            allowComments={allowComments}
-          />
-        ))}
-      </div>
+      {isMarkdown && viewMode === 'preview'
+        ? (
+          <MarkdownPreview content={content ?? ''} />
+          )
+        : (
+          <div className='font-mono text-sm min-w-max'>
+            {lines.map((lineContent, index) => (
+              <BrowseLine
+                key={index}
+                lineNumber={index + 1}
+                content={lineContent}
+                filePath={filePath}
+                allowComments={allowComments}
+              />
+            ))}
+          </div>
+          )}
     </div>
   )
 }
