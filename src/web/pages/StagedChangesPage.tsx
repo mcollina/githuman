@@ -48,6 +48,13 @@ export function StagedChangesPage () {
     lineType: 'added' | 'removed' | 'context';
   } | null>(null)
 
+  // State for confirmation dialog when clicking lines on unstaged tab
+  const [pendingUnstagedComment, setPendingUnstagedComment] = useState<{
+    filePath: string;
+    lineNumber: number;
+    lineType: 'added' | 'removed' | 'context';
+  } | null>(null)
+
   // Browse mode state (controlled by parent, passed to BrowsableDiffView)
   const [browseMode, setBrowseMode] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
@@ -124,6 +131,38 @@ export function StagedChangesPage () {
   const handlePendingLineActivated = useCallback(() => {
     setPendingLine(null)
   }, [])
+
+  // Handler for clicking lines on unstaged tab - shows confirmation dialog
+  const handleUnstagedLineClick = (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => {
+    setPendingUnstagedComment({ filePath, lineNumber, lineType })
+  }
+
+  // Handler for confirming staging and commenting
+  const handleConfirmStageAndComment = async () => {
+    if (!pendingUnstagedComment) return
+
+    try {
+      setCreateError(null)
+      // 1. Stage the file
+      await stageFiles([pendingUnstagedComment.filePath])
+
+      // 2. Store the pending line for activation after review creation
+      setPendingLine(pendingUnstagedComment)
+
+      // 3. Create review if needed
+      if (!reviewId) {
+        const review = await create({ sourceType: 'staged' })
+        setReviewId(review.id)
+      }
+
+      // 4. Switch to staged tab
+      setActiveTab('staged')
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to stage file')
+    } finally {
+      setPendingUnstagedComment(null)
+    }
+  }
 
   const handleStageFile = async (filePath: string) => {
     try {
@@ -345,7 +384,11 @@ export function StagedChangesPage () {
                     selectedFile={selectedFile}
                     onFileSelect={setSelectedFile}
                     allowComments={activeTab === 'staged' && !!reviewId}
-                    onLineClick={activeTab === 'staged' && !reviewId ? handleLineClick : undefined}
+                    onLineClick={
+                      activeTab === 'unstaged'
+                        ? handleUnstagedLineClick
+                        : (activeTab === 'staged' && !reviewId ? handleLineClick : undefined)
+                    }
                     showStageButtons={activeTab === 'unstaged'}
                     onStageFile={handleStageFile}
                     staging={staging}
@@ -371,7 +414,7 @@ export function StagedChangesPage () {
                         {activeTab === 'unstaged' && hasUnstagedChanges && (
                           <div className='p-3 sm:p-4 border-b border-[var(--gh-border)] bg-[var(--gh-bg-tertiary)]'>
                             <div className='text-xs sm:text-sm text-[var(--gh-text-secondary)]'>
-                              Click the <span className='font-medium text-[var(--gh-accent-primary)]'>+</span> button next to a file to stage it, or use Stage All
+                              Click the <span className='font-medium text-[var(--gh-accent-primary)]'>+</span> button to stage a file, or click a line to stage and add a comment
                             </div>
                           </div>
                         )}
@@ -381,6 +424,39 @@ export function StagedChangesPage () {
                 )
               )}
       </div>
+
+      {/* Confirmation dialog for staging and commenting */}
+      {pendingUnstagedComment && (
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='bg-[var(--gh-bg-primary)] rounded-lg p-6 max-w-md mx-4 border border-[var(--gh-border)]'>
+            <h3 className='text-lg font-semibold text-[var(--gh-text-primary)] mb-2'>
+              Stage File to Add Comment
+            </h3>
+            <p className='text-sm text-[var(--gh-text-secondary)] mb-4'>
+              To add a comment, the file{' '}
+              <code className='px-1 py-0.5 bg-[var(--gh-bg-surface)] rounded text-[var(--gh-text-primary)]'>
+                {pendingUnstagedComment.filePath}
+              </code>{' '}
+              will be staged for commit.
+            </p>
+            <div className='flex gap-3 justify-end'>
+              <button
+                onClick={() => setPendingUnstagedComment(null)}
+                className='px-4 py-2 text-sm font-medium text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)] transition-colors'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmStageAndComment}
+                disabled={staging || creating}
+                className='gh-btn gh-btn-primary'
+              >
+                {staging || creating ? 'Staging...' : 'Stage and Comment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </CommentProvider>
   )
 }

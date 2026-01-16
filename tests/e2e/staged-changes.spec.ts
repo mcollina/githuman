@@ -112,3 +112,138 @@ test.describe('File Expand/Collapse', () => {
     await expect(diffLine).toBeVisible()
   })
 })
+
+// Test file path for unstaged commenting test
+const UNSTAGED_TEST_FILE = join(TEST_REPO_PATH, 'test-unstaged-comment.ts')
+
+test.describe('Commenting on Unstaged Files', () => {
+  // Setup: Create an untracked file (not staged)
+  test.beforeEach(async () => {
+    // Clean up any previous runs
+    try {
+      execSync(`git reset HEAD "${UNSTAGED_TEST_FILE}"`, { cwd: TEST_REPO_PATH, stdio: 'ignore' })
+    } catch { /* ignore */ }
+    try {
+      if (existsSync(UNSTAGED_TEST_FILE)) {
+        unlinkSync(UNSTAGED_TEST_FILE)
+      }
+    } catch { /* ignore */ }
+    // Create a new untracked file
+    writeFileSync(UNSTAGED_TEST_FILE, `// Unstaged file ${uid()}\nconst x = 1;\nconst y = 2;\n`)
+  })
+
+  // Cleanup: Remove test file and unstage
+  test.afterEach(async () => {
+    try {
+      execSync(`git reset HEAD "${UNSTAGED_TEST_FILE}"`, { cwd: TEST_REPO_PATH, stdio: 'ignore' })
+    } catch { /* ignore */ }
+    try {
+      if (existsSync(UNSTAGED_TEST_FILE)) {
+        unlinkSync(UNSTAGED_TEST_FILE)
+      }
+    } catch { /* ignore */ }
+  })
+
+  test('should show confirmation when clicking line on unstaged tab', async ({ page }) => {
+    // Navigate and wait for API responses
+    await page.goto('/')
+
+    // Wait for the unstaged diff response to ensure our file is detected
+    await page.waitForResponse(
+      (response) => response.url().includes('/api/diff/unstaged') && response.status() === 200,
+      { timeout: 15000 }
+    )
+
+    // Click on the unstaged tab - need to filter carefully since there might be a badge
+    const unstagedTab = page.locator('button').filter({ hasText: 'Unstaged' }).first()
+    await expect(unstagedTab).toBeVisible({ timeout: 10000 })
+    await unstagedTab.click()
+
+    // Wait for the sidebar to show the file and click on it to expand the diff
+    const fileInSidebar = page.locator('button').filter({ hasText: 'test-unstaged-comment.ts' }).first()
+    await expect(fileInSidebar).toBeVisible({ timeout: 10000 })
+    await fileInSidebar.click()
+
+    // Find diff lines - for untracked files they show as added lines
+    const diffLine = page.getByRole('button', { name: /^\d+ \+ / }).first()
+    await expect(diffLine).toBeVisible({ timeout: 15000 })
+    await diffLine.click()
+
+    // Confirmation dialog should appear
+    await expect(page.getByText('Stage File to Add Comment')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('will be staged for commit')).toBeVisible()
+  })
+
+  test('should cancel when clicking Cancel in confirmation', async ({ page }) => {
+    // Navigate and wait for API responses
+    await page.goto('/')
+
+    // Wait for the unstaged diff response
+    await page.waitForResponse(
+      (response) => response.url().includes('/api/diff/unstaged') && response.status() === 200,
+      { timeout: 15000 }
+    )
+
+    // Click on the unstaged tab
+    const unstagedTab = page.locator('button').filter({ hasText: 'Unstaged' }).first()
+    await unstagedTab.click()
+
+    // Wait for the sidebar to show the file and click on it to expand the diff
+    const fileInSidebar = page.locator('button').filter({ hasText: 'test-unstaged-comment.ts' }).first()
+    await expect(fileInSidebar).toBeVisible({ timeout: 10000 })
+    await fileInSidebar.click()
+
+    // Find and click a diff line
+    const diffLine = page.getByRole('button', { name: /^\d+ \+ / }).first()
+    await expect(diffLine).toBeVisible({ timeout: 15000 })
+    await diffLine.click()
+
+    // Confirmation dialog should appear
+    await expect(page.getByText('Stage File to Add Comment')).toBeVisible({ timeout: 5000 })
+
+    // Cancel
+    await page.getByRole('button', { name: 'Cancel' }).click()
+
+    // Dialog should close
+    await expect(page.getByText('Stage File to Add Comment')).not.toBeVisible()
+  })
+
+  test('should stage file and enable comments when confirmed', async ({ page }) => {
+    // Navigate and wait for API responses
+    await page.goto('/')
+
+    // Wait for the unstaged diff response
+    await page.waitForResponse(
+      (response) => response.url().includes('/api/diff/unstaged') && response.status() === 200,
+      { timeout: 15000 }
+    )
+
+    // Click on the unstaged tab
+    const unstagedTab = page.locator('button').filter({ hasText: 'Unstaged' }).first()
+    await unstagedTab.click()
+
+    // Wait for the sidebar to show the file and click on it to expand the diff
+    const fileInSidebar = page.locator('button').filter({ hasText: 'test-unstaged-comment.ts' }).first()
+    await expect(fileInSidebar).toBeVisible({ timeout: 10000 })
+    await fileInSidebar.click()
+
+    // Find and click a diff line
+    const diffLine = page.getByRole('button', { name: /^\d+ \+ / }).first()
+    await expect(diffLine).toBeVisible({ timeout: 15000 })
+    await diffLine.click()
+
+    // Confirm staging
+    await expect(page.getByText('Stage File to Add Comment')).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: 'Stage and Comment' }).click()
+
+    // Should switch to staged tab with comment form open
+    await expect(page.getByPlaceholder('Write a comment...')).toBeVisible({ timeout: 15000 })
+
+    // Add a comment
+    await page.getByPlaceholder('Write a comment...').fill('Comment on previously unstaged file')
+    await page.getByRole('button', { name: 'Add Comment' }).click()
+
+    // Comment should appear
+    await expect(page.getByText('Comment on previously unstaged file')).toBeVisible({ timeout: 10000 })
+  })
+})
