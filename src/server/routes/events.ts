@@ -85,6 +85,10 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ],
         ignoreInitial: true,
         persistent: true,
+        // Use polling on macOS to avoid FSEvents file descriptor issues
+        // that cause EBADF errors when spawning child processes (e.g., git)
+        usePolling: process.platform === 'darwin',
+        interval: 1000,
       })
 
       fileWatcher.on('all', () => {

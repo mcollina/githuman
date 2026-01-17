@@ -16,6 +16,7 @@ Options:
   --no-open              Don't auto-open browser
   --host <string>        Host to bind to (default: localhost)
   --auth <token>         Enable token authentication
+  -v, --verbose          Enable verbose logging (full pino-pretty output)
   -h, --help             Show this help message
 `)
 }
@@ -29,6 +30,7 @@ export async function serveCommand (args: string[]) {
       open: { type: 'boolean', default: true },
       host: { type: 'string', default: 'localhost' },
       auth: { type: 'string' },
+      verbose: { type: 'boolean', short: 'v', default: false },
       help: { type: 'boolean', short: 'h' },
     },
   })
@@ -45,7 +47,7 @@ export async function serveCommand (args: string[]) {
   })
 
   // Start the server
-  await startServer(config)
+  await startServer(config, { verbose: values.verbose })
 
   // Open browser if requested
   if (values.open) {

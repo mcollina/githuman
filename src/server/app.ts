@@ -28,22 +28,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export interface AppOptions {
   logger?: boolean;
   serveStatic?: boolean;
+  verbose?: boolean;
 }
 
-function getLoggerConfig (enabled: boolean) {
+function getLoggerConfig (enabled: boolean, verbose: boolean) {
   if (!enabled) return false
 
-  // Use one-line-logger for pretty output when running in a TTY
+  // Use pino-pretty for verbose output, one-line-logger for compact output
   if (process.stdout.isTTY) {
     return {
+      level: verbose ? 'debug' : 'info',
       transport: {
-        target: '@fastify/one-line-logger',
+        target: verbose ? 'pino-pretty' : '@fastify/one-line-logger',
       },
     }
   }
 
   // Default JSON logging for non-TTY (e.g., piped output, log files)
-  return true
+  return {
+    level: verbose ? 'debug' : 'info',
+  }
 }
 
 export async function buildApp (
@@ -51,7 +55,7 @@ export async function buildApp (
   options: AppOptions = {}
 ): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: getLoggerConfig(options.logger ?? true),
+    logger: getLoggerConfig(options.logger ?? true, options.verbose ?? false),
     forceCloseConnections: true, // Close all connections on shutdown (important for SSE)
   }).withTypeProvider<TypeBoxTypeProvider>()
 

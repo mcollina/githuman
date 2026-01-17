@@ -108,4 +108,16 @@ describe('app', () => {
       assert.ok(response.headers['access-control-allow-origin'])
     })
   })
+
+  describe('verbose option', () => {
+    it('should build app with verbose option', async () => {
+      const config = createConfig()
+      const app = await buildApp(config, { logger: false, verbose: true })
+
+      // App should build successfully with verbose option
+      assert.ok(app)
+
+      await app.close()
+    })
+  })
 })

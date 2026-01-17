@@ -2,16 +2,16 @@
  * Server entry point
  */
 import closeWithGrace from 'close-with-grace'
-import { buildApp } from './app.ts'
+import { buildApp, type AppOptions } from './app.ts'
 import { initDatabase, closeDatabase } from './db/index.ts'
 import type { ServerConfig } from './config.ts'
 
-export async function startServer (config: ServerConfig): Promise<void> {
+export async function startServer (config: ServerConfig, options: AppOptions = {}): Promise<void> {
   // Initialize database
   initDatabase(config.dbPath)
 
   // Build and start the app
-  const app = await buildApp(config)
+  const app = await buildApp(config, options)
 
   // Graceful shutdown with timeout
   closeWithGrace({ delay: 5000 }, async ({ signal, err }) => {

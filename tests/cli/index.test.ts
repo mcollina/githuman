@@ -101,6 +101,7 @@ describe('CLI', () => {
       assert.ok(result.stdout.includes('--host'))
       assert.ok(result.stdout.includes('--auth'))
       assert.ok(result.stdout.includes('--no-open'))
+      assert.ok(result.stdout.includes('-v, --verbose'))
     })
 
     it('should show help with -h flag', async () => {
