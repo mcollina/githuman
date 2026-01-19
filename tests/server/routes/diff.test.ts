@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert'
 import { mkdtempSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, basename } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { buildApp } from '../../../src/server/app.ts'
@@ -49,7 +49,8 @@ describe('diff routes', () => {
       })
 
       const body = JSON.parse(response.body)
-      assert.strictEqual(body.name, 'githuman')
+      // Repository name should match the directory name, regardless of where project is cloned
+      assert.strictEqual(body.name, basename(process.cwd()))
     })
   })
 
