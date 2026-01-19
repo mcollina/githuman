@@ -31,12 +31,39 @@ function createTestRepoWithCommit (t: TestContext): string {
   return tempDir
 }
 
-describe('git.service', () => {
-  // Use current directory which is a git repo
-  const git = new GitService(process.cwd())
+function createTestRepoWithMultipleCommits (t: TestContext): string {
+  const tempDir = createTestRepo(t)
 
+  // Create multiple commits for testing pagination
+  writeFileSync(join(tempDir, 'file1.txt'), 'content 1\n')
+  execSync('git add file1.txt', { cwd: tempDir, stdio: 'ignore' })
+  execSync('git commit -m "First commit"', { cwd: tempDir, stdio: 'ignore' })
+
+  writeFileSync(join(tempDir, 'file2.txt'), 'content 2\n')
+  execSync('git add file2.txt', { cwd: tempDir, stdio: 'ignore' })
+  execSync('git commit -m "Second commit"', { cwd: tempDir, stdio: 'ignore' })
+
+  writeFileSync(join(tempDir, 'file3.txt'), 'content 3\n')
+  execSync('git add file3.txt', { cwd: tempDir, stdio: 'ignore' })
+  execSync('git commit -m "Third commit"', { cwd: tempDir, stdio: 'ignore' })
+
+  writeFileSync(join(tempDir, 'file4.txt'), 'content 4\n')
+  execSync('git add file4.txt', { cwd: tempDir, stdio: 'ignore' })
+  execSync('git commit -m "Fourth commit"', { cwd: tempDir, stdio: 'ignore' })
+
+  writeFileSync(join(tempDir, 'file5.txt'), 'content 5\n')
+  execSync('git add file5.txt', { cwd: tempDir, stdio: 'ignore' })
+  execSync('git commit -m "Fifth commit"', { cwd: tempDir, stdio: 'ignore' })
+
+  return tempDir
+}
+
+describe('git.service', () => {
   describe('getCommits', () => {
-    it('should return an array of commits', async () => {
+    it('should return an array of commits', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 5 })
 
       assert.ok(Array.isArray(result.commits))
@@ -45,7 +72,10 @@ describe('git.service', () => {
       assert.ok(typeof result.hasMore === 'boolean')
     })
 
-    it('should return commits with required properties', async () => {
+    it('should return commits with required properties', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 1 })
 
       assert.strictEqual(result.commits.length, 1)
@@ -58,7 +88,10 @@ describe('git.service', () => {
       assert.ok(typeof commit.date === 'string')
     })
 
-    it('should respect the limit parameter', async () => {
+    it('should respect the limit parameter', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result3 = await git.getCommits({ limit: 3 })
       const result10 = await git.getCommits({ limit: 10 })
 
@@ -67,7 +100,10 @@ describe('git.service', () => {
       assert.ok(result10.commits.length >= result3.commits.length)
     })
 
-    it('should return commits in order (newest first)', async () => {
+    it('should return commits in order (newest first)', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 5 })
 
       if (result.commits.length >= 2) {
@@ -78,68 +114,91 @@ describe('git.service', () => {
       }
     })
 
-    it('should support offset for pagination', async () => {
+    it('should support offset for pagination', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const firstPage = await git.getCommits({ limit: 2, offset: 0 })
       const secondPage = await git.getCommits({ limit: 2, offset: 2 })
 
-      // If there are enough commits, the pages should be different
-      if (firstPage.commits.length >= 2 && secondPage.commits.length >= 1) {
-        assert.notStrictEqual(firstPage.commits[0].sha, secondPage.commits[0].sha)
-      }
+      // Test repo has 5 commits, so both pages should have commits
+      assert.strictEqual(firstPage.commits.length, 2)
+      assert.ok(secondPage.commits.length >= 1)
+      assert.notStrictEqual(firstPage.commits[0].sha, secondPage.commits[0].sha)
     })
 
-    it('should indicate hasMore when there are more commits', async () => {
+    it('should indicate hasMore when there are more commits', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 1 })
 
-      // This repo should have more than 1 commit, so hasMore should be true
+      // Test repo has 5 commits, so hasMore should be true when limit is 1
       assert.strictEqual(result.hasMore, true)
     })
   })
 
   describe('getCommitsDiff', () => {
-    it('should return empty string for empty commits array', async () => {
+    it('should return empty string for empty commits array', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const diff = await git.getCommitsDiff([])
       assert.strictEqual(diff, '')
     })
 
-    it('should return diff for a single commit', async () => {
+    it('should return diff for a single commit', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 1 })
       assert.ok(result.commits.length > 0, 'Need at least one commit to test')
 
       const diff = await git.getCommitsDiff([result.commits[0].sha])
 
-      // Diff should be a string (could be empty if commit has no changes)
+      // Diff should be a string with content (our test repo has real changes)
       assert.ok(typeof diff === 'string')
+      assert.ok(diff.length > 0, 'Diff should have content')
     })
 
-    it('should return combined diff for multiple commits', async () => {
+    it('should return combined diff for multiple commits', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 3 })
+      assert.ok(result.commits.length >= 2, 'Need at least 2 commits')
 
-      if (result.commits.length >= 2) {
-        const diff = await git.getCommitsDiff([result.commits[0].sha, result.commits[1].sha])
+      const diff = await git.getCommitsDiff([result.commits[0].sha, result.commits[1].sha])
 
-        // Should return a string with diff content
-        assert.ok(typeof diff === 'string')
-      }
+      // Should return a string with diff content
+      assert.ok(typeof diff === 'string')
+      assert.ok(diff.length > 0, 'Combined diff should have content')
     })
 
-    it('should handle commits in any order', async () => {
+    it('should handle commits in any order', async (t) => {
+      const tempDir = createTestRepoWithMultipleCommits(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 3 })
+      assert.ok(result.commits.length >= 2, 'Need at least 2 commits')
 
-      if (result.commits.length >= 2) {
-        // Order shouldn't matter - we combine individual diffs
-        const diff1 = await git.getCommitsDiff([result.commits[0].sha, result.commits[1].sha])
-        const diff2 = await git.getCommitsDiff([result.commits[1].sha, result.commits[0].sha])
+      // Order shouldn't matter - we combine individual diffs
+      const diff1 = await git.getCommitsDiff([result.commits[0].sha, result.commits[1].sha])
+      const diff2 = await git.getCommitsDiff([result.commits[1].sha, result.commits[0].sha])
 
-        // Both should be valid strings
-        assert.ok(typeof diff1 === 'string')
-        assert.ok(typeof diff2 === 'string')
-      }
+      // Both should be valid strings with content
+      assert.ok(typeof diff1 === 'string')
+      assert.ok(typeof diff2 === 'string')
+      assert.ok(diff1.length > 0)
+      assert.ok(diff2.length > 0)
     })
   })
 
   describe('getCommitsFileDiff', () => {
-    it('should return empty string for empty commits array', async () => {
+    it('should return empty string for empty commits array', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const diff = await git.getCommitsFileDiff([], 'some-file.ts')
       assert.strictEqual(diff, '')
     })
@@ -240,21 +299,30 @@ describe('git.service', () => {
   })
 
   describe('getBranches', () => {
-    it('should return an array of branches', async () => {
+    it('should return an array of branches', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const branches = await git.getBranches()
 
       assert.ok(Array.isArray(branches))
       assert.ok(branches.length > 0, 'Should have at least one branch')
     })
 
-    it('should have one current branch', async () => {
+    it('should have one current branch', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const branches = await git.getBranches()
       const currentBranches = branches.filter(b => b.isCurrent)
 
       assert.strictEqual(currentBranches.length, 1, 'Should have exactly one current branch')
     })
 
-    it('should return branches with required properties', async () => {
+    it('should return branches with required properties', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const branches = await git.getBranches()
 
       for (const branch of branches) {
@@ -266,7 +334,10 @@ describe('git.service', () => {
   })
 
   describe('isRepo', () => {
-    it('should return true for a git repository', async () => {
+    it('should return true for a git repository', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const result = await git.isRepo()
       assert.strictEqual(result, true)
     })
@@ -279,7 +350,10 @@ describe('git.service', () => {
   })
 
   describe('hasCommits', () => {
-    it('should return true for a repository with commits', async () => {
+    it('should return true for a repository with commits', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const result = await git.hasCommits()
       assert.strictEqual(result, true)
     })
@@ -292,7 +366,10 @@ describe('git.service', () => {
   })
 
   describe('getCurrentBranch', () => {
-    it('should return the current branch name', async () => {
+    it('should return the current branch name', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const branch = await git.getCurrentBranch()
 
       assert.ok(typeof branch === 'string')
@@ -487,15 +564,21 @@ describe('git.service', () => {
   })
 
   describe('getFilesAtRef', () => {
-    it('should return all files at HEAD', async () => {
+    it('should return all files at HEAD', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const files = await git.getFilesAtRef('HEAD')
 
       assert.ok(Array.isArray(files))
       assert.ok(files.length > 0, 'Should have at least one file')
-      assert.ok(files.includes('package.json'), 'Should include package.json')
+      assert.ok(files.includes('README.md'), 'Should include README.md')
     })
 
-    it('should return files at a specific commit SHA', async () => {
+    it('should return files at a specific commit SHA', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       const result = await git.getCommits({ limit: 1 })
       assert.ok(result.commits.length > 0, 'Need at least one commit to test')
 
@@ -505,7 +588,10 @@ describe('git.service', () => {
       assert.ok(files.length > 0)
     })
 
-    it('should throw for invalid ref', async () => {
+    it('should throw for invalid ref', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
       await assert.rejects(
         async () => git.getFilesAtRef('invalid-ref-that-does-not-exist-xyz'),
         { message: /fatal|not a valid/ }
