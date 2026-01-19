@@ -78,8 +78,8 @@ test.describe('Browse Full Codebase', () => {
     // Click on README.md (not in the diff)
     await page.getByRole('button', { name: 'README.md' }).click()
 
-    // File content should be displayed
-    await expect(page.getByText('# Test Repository')).toBeVisible({ timeout: 5000 })
+    // File content should be displayed (markdown is rendered, so look for the heading)
+    await expect(page.getByRole('heading', { name: 'Test Repository' })).toBeVisible({ timeout: 5000 })
   })
 
   test('can add comment on non-diff file', async ({ page, request }) => {

@@ -12,12 +12,15 @@ test.describe('Reviews Page', () => {
   })
 
   test('should show empty state when no reviews exist', async ({ page }) => {
+    // Set up the response promise BEFORE navigation to avoid race condition
+    const responsePromise = page.waitForResponse((response) =>
+      response.url().includes('/api/reviews') && response.status() === 200
+    )
+
     await page.goto('/reviews')
 
     // Wait for API response
-    const response = await page.waitForResponse((response) =>
-      response.url().includes('/api/reviews') && response.status() === 200
-    )
+    const response = await responsePromise
 
     const data = await response.json()
 

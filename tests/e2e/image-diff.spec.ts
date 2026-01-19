@@ -54,9 +54,11 @@ test.describe('Image Diff', () => {
     const img = page.locator('img[alt*="Added"]')
     await expect(img).toBeVisible()
 
-    // Check that the image loaded successfully (not broken)
-    const naturalWidth = await img.evaluate((el: HTMLImageElement) => el.naturalWidth)
-    expect(naturalWidth).toBeGreaterThan(0)
+    // Wait for the image to actually load (not just be visible in DOM)
+    await expect(async () => {
+      const naturalWidth = await img.evaluate((el: HTMLImageElement) => el.naturalWidth)
+      expect(naturalWidth).toBeGreaterThan(0)
+    }).toPass({ timeout: 10000 })
   })
 
   test('should load image from API endpoint', async ({ page, request }) => {

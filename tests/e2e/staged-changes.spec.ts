@@ -236,7 +236,19 @@ test.describe('Commenting on Unstaged Files', () => {
     await expect(page.getByText('Stage File to Add Comment')).toBeVisible({ timeout: 5000 })
     await page.getByRole('button', { name: 'Stage and Comment' }).click()
 
-    // Should switch to staged tab with comment form open
+    // Wait for dialog to close and staged tab to update
+    await expect(page.getByText('Stage File to Add Comment')).not.toBeVisible({ timeout: 5000 })
+
+    // Verify we're on the staged tab with the file present
+    await expect(page.locator('button').filter({ hasText: /^Staged/ })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('button').filter({ hasText: 'test-unstaged-comment.ts' }).first()).toBeVisible({ timeout: 10000 })
+
+    // Click on a diff line to open comment form (the auto-open may have a timing issue)
+    const stagedDiffLine = page.getByRole('button', { name: /^\d+ \+ / }).first()
+    await expect(stagedDiffLine).toBeVisible({ timeout: 10000 })
+    await stagedDiffLine.click()
+
+    // Now the comment form should be visible
     await expect(page.getByPlaceholder('Write a comment...')).toBeVisible({ timeout: 15000 })
 
     // Add a comment

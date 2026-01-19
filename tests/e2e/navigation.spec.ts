@@ -30,7 +30,7 @@ test.describe('Navigation', () => {
   test('should navigate back to changes from reviews', async ({ page }) => {
     await page.goto('/reviews')
 
-    await page.getByRole('link', { name: 'Changes' }).click()
+    await page.getByRole('link', { name: 'Changes', exact: true }).click()
 
     await expect(page).toHaveURL('/')
   })
