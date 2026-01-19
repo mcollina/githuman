@@ -1,5 +1,6 @@
 node_modules/
 dist/
+out/
 .githuman/
 *.log
 .DS_Store
