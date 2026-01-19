@@ -3,6 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { LineComment } from '../../../src/web/components/diff/LineComment'
 import type { Comment } from '../../../src/shared/types'
 
+// Format the timestamp the same way the component does, to handle timezone differences
+const TEST_TIMESTAMP = '2024-01-01T12:00:00Z'
+const formattedTimestamp = new Date(TEST_TIMESTAMP).toLocaleDateString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 describe('LineComment', () => {
   const mockComment: Comment = {
     id: 'comment-1',
@@ -12,8 +21,8 @@ describe('LineComment', () => {
     content: 'This is a test comment',
     suggestion: null,
     resolved: false,
-    createdAt: '2024-01-01T12:00:00Z',
-    updatedAt: '2024-01-01T12:00:00Z',
+    createdAt: TEST_TIMESTAMP,
+    updatedAt: TEST_TIMESTAMP,
   }
 
   const resolvedComment: Comment = {
@@ -53,7 +62,7 @@ describe('LineComment', () => {
       render(<LineComment comment={mockComment} onResolve={() => {}} onEdit={() => {}} onDelete={() => {}} />)
 
       // Click the header to show actions
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
 
       expect(screen.getByText('Resolve')).toBeDefined()
@@ -64,7 +73,7 @@ describe('LineComment', () => {
     it('shows Unresolve button for resolved comments', () => {
       render(<LineComment comment={resolvedComment} onUnresolve={() => {}} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
 
       expect(screen.getByText('Unresolve')).toBeDefined()
@@ -74,7 +83,7 @@ describe('LineComment', () => {
       const onResolve = vi.fn()
       render(<LineComment comment={mockComment} onResolve={onResolve} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Resolve'))
 
@@ -85,7 +94,7 @@ describe('LineComment', () => {
       const onUnresolve = vi.fn()
       render(<LineComment comment={resolvedComment} onUnresolve={onUnresolve} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Unresolve'))
 
@@ -97,7 +106,7 @@ describe('LineComment', () => {
     it('enters edit mode when Edit button is clicked', () => {
       render(<LineComment comment={mockComment} onEdit={() => {}} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Edit'))
 
@@ -109,7 +118,7 @@ describe('LineComment', () => {
       const onEdit = vi.fn()
       render(<LineComment comment={mockComment} onEdit={onEdit} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Edit'))
 
@@ -123,7 +132,7 @@ describe('LineComment', () => {
     it('cancels edit and restores original content when Cancel is clicked', () => {
       render(<LineComment comment={mockComment} onEdit={() => {}} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Edit'))
 
@@ -140,7 +149,7 @@ describe('LineComment', () => {
       const onEdit = vi.fn()
       render(<LineComment comment={mockComment} onEdit={onEdit} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Edit'))
 
@@ -157,7 +166,7 @@ describe('LineComment', () => {
       const onDelete = vi.fn()
       render(<LineComment comment={mockComment} onDelete={onDelete} />)
 
-      const header = screen.getByText('Jan 1, 12:00 PM').closest('div')
+      const header = screen.getByText(formattedTimestamp).closest('div')
       fireEvent.click(header!)
       fireEvent.click(screen.getByText('Delete'))
 
