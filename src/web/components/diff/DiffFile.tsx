@@ -1,20 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { cn } from '../../lib/utils'
 import { DiffHunk } from './DiffHunk'
 import { FullFileView } from './FullFileView'
 import { ImageDiff, isImageFile } from './ImageDiff'
 import { MarkdownDiff, isMarkdownFile } from './MarkdownDiff'
-import type { DiffFile as DiffFileType } from '../../../shared/types'
+import { reviewsApi } from '../../api/reviews'
+import type { DiffFile as DiffFileType, DiffFileMetadata, DiffHunk as DiffHunkType } from '../../../shared/types'
 
 interface DiffFileProps {
-  file: DiffFileType;
+  file: DiffFileMetadata | DiffFileType;
+  reviewId?: string; // If provided, enables lazy loading of hunks
   defaultExpanded?: boolean;
   forceExpanded?: boolean;
   allowComments?: boolean;
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
 }
 
-function getStatusBadge (status: DiffFileType['status']) {
+function hasHunks (file: DiffFileMetadata | DiffFileType): file is DiffFileType {
+  return 'hunks' in file && Array.isArray(file.hunks)
+}
+
+function getStatusBadge (status: DiffFileMetadata['status']) {
   const styles = {
     added: 'gh-badge gh-badge-success',
     deleted: 'gh-badge gh-badge-error',
@@ -36,8 +42,11 @@ function getStatusBadge (status: DiffFileType['status']) {
   )
 }
 
-export function DiffFile ({ file, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick }: DiffFileProps) {
+export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick }: DiffFileProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
+  const [loadedHunks, setLoadedHunks] = useState<DiffHunkType[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // If forceExpanded is true, ensure the file is expanded
   const isExpanded = forceExpanded || expanded
@@ -49,6 +58,33 @@ export function DiffFile ({ file, defaultExpanded = true, forceExpanded, allowCo
 
   const filePath = file.newPath || file.oldPath
 
+  // Determine hunks to display
+  const hunks = hasHunks(file) ? file.hunks : loadedHunks
+
+  // Load hunks when expanded if we have a reviewId and no hunks yet
+  const loadHunks = useCallback(async () => {
+    if (!reviewId || hasHunks(file) || loadedHunks || loading) return
+
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await reviewsApi.getFileHunks(reviewId, filePath)
+      setLoadedHunks(response.hunks)
+    } catch (err) {
+      setError('Failed to load diff')
+      console.error('Failed to load hunks:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [reviewId, file, filePath, loadedHunks, loading])
+
+  // Load hunks when file is expanded (for lazy loading)
+  useEffect(() => {
+    if (isExpanded && reviewId && !hasHunks(file) && !loadedHunks && !loading) {
+      loadHunks()
+    }
+  }, [isExpanded, reviewId, file, loadedHunks, loading, loadHunks])
+
   // Check if this is an image file
   const isImage = isImageFile(filePath)
 
@@ -57,6 +93,11 @@ export function DiffFile ({ file, defaultExpanded = true, forceExpanded, allowCo
 
   // Can only show full file for added or modified files (not deleted) and non-image/non-markdown files
   const canShowFullFile = !isImage && !isMarkdown && (file.status === 'added' || file.status === 'modified' || file.status === 'renamed')
+
+  // For image and markdown diffs, we need a full DiffFile with hunks
+  const fileWithHunks: DiffFileType = hasHunks(file)
+    ? file
+    : { ...file, hunks: loadedHunks ?? [] }
 
   return (
     <div id={filePath} className='gh-card overflow-hidden'>
@@ -85,7 +126,7 @@ export function DiffFile ({ file, defaultExpanded = true, forceExpanded, allowCo
         </button>
 
         {/* View mode toggle */}
-        {isExpanded && canShowFullFile && file.hunks.length > 0 && (
+        {isExpanded && canShowFullFile && hunks && hunks.length > 0 && (
           <div className='flex items-center border-l border-[var(--gh-border)] px-2'>
             <button
               onClick={() => setViewMode('diff')}
@@ -117,40 +158,59 @@ export function DiffFile ({ file, defaultExpanded = true, forceExpanded, allowCo
 
       {isExpanded && (
         <div className='overflow-x-auto'>
-          {isImage
+          {loading
             ? (
-              <ImageDiff file={file} />
+              <div className='p-4 text-center text-[var(--gh-text-muted)] text-sm'>
+                <div className='gh-spinner w-5 h-5 mx-auto' />
+                <p className='mt-2'>Loading diff...</p>
+              </div>
               )
-            : isMarkdown
+            : error
               ? (
-                <MarkdownDiff file={file} allowComments={allowComments} />
+                <div className='p-4 text-center text-[var(--gh-error)] text-sm'>
+                  <p>{error}</p>
+                  <button
+                    onClick={loadHunks}
+                    className='mt-2 px-3 py-1 text-xs bg-[var(--gh-bg-elevated)] hover:bg-[var(--gh-bg-surface)] rounded transition-colors'
+                  >
+                    Retry
+                  </button>
+                </div>
                 )
-              : file.hunks.length === 0
+              : isImage
                 ? (
-                  <div className='p-4 text-center text-[var(--gh-text-muted)] text-sm'>
-                    {file.status === 'renamed' ? 'File renamed (no content changes)' : 'No changes to display'}
-                  </div>
+                  <ImageDiff file={fileWithHunks} />
                   )
-                : viewMode === 'full' && canShowFullFile
+                : isMarkdown
                   ? (
-                    <FullFileView
-                      filePath={filePath}
-                      hunks={file.hunks}
-                      allowComments={allowComments}
-                      onLineClick={onLineClick}
-                    />
+                    <MarkdownDiff file={fileWithHunks} allowComments={allowComments} />
                     )
-                  : (
-                      file.hunks.map((hunk, index) => (
-                        <DiffHunk
-                          key={index}
-                          hunk={hunk}
-                          filePath={filePath}
-                          allowComments={allowComments}
-                          onLineClick={onLineClick}
-                        />
-                      ))
-                    )}
+                  : !hunks || hunks.length === 0
+                      ? (
+                        <div className='p-4 text-center text-[var(--gh-text-muted)] text-sm'>
+                          {file.status === 'renamed' ? 'File renamed (no content changes)' : 'No changes to display'}
+                        </div>
+                        )
+                      : viewMode === 'full' && canShowFullFile
+                        ? (
+                          <FullFileView
+                            filePath={filePath}
+                            hunks={hunks}
+                            allowComments={allowComments}
+                            onLineClick={onLineClick}
+                          />
+                          )
+                        : (
+                            hunks.map((hunk, index) => (
+                              <DiffHunk
+                                key={index}
+                                hunk={hunk}
+                                filePath={filePath}
+                                allowComments={allowComments}
+                                onLineClick={onLineClick}
+                              />
+                            ))
+                          )}
         </div>
       )}
     </div>

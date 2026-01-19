@@ -138,6 +138,107 @@ describe('git.service', () => {
     })
   })
 
+  describe('getCommitsFileDiff', () => {
+    it('should return empty string for empty commits array', async () => {
+      const diff = await git.getCommitsFileDiff([], 'some-file.ts')
+      assert.strictEqual(diff, '')
+    })
+
+    it('should return diff for a specific file in a commit', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      // Add a new file and commit
+      writeFileSync(join(tempDir, 'src.ts'), 'const x = 1;\n')
+      execSync('git add src.ts && git commit -m "Add src.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Get the commit SHA
+      const result = await testGit.getCommits({ limit: 1 })
+      const sha = result.commits[0].sha
+
+      const diff = await testGit.getCommitsFileDiff([sha], 'src.ts')
+      assert.ok(diff.includes('src.ts'))
+      assert.ok(diff.includes('+const x = 1;'))
+    })
+
+    it('should return empty string for non-existent file', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      const result = await testGit.getCommits({ limit: 1 })
+      const sha = result.commits[0].sha
+
+      const diff = await testGit.getCommitsFileDiff([sha], 'non-existent.ts')
+      assert.strictEqual(diff, '')
+    })
+
+    it('should combine diffs from multiple commits for same file', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      // First commit: add file
+      writeFileSync(join(tempDir, 'src.ts'), 'const x = 1;\n')
+      execSync('git add src.ts && git commit -m "Add src.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Second commit: modify file
+      writeFileSync(join(tempDir, 'src.ts'), 'const x = 2;\n')
+      execSync('git add src.ts && git commit -m "Modify src.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Get both commits
+      const result = await testGit.getCommits({ limit: 2 })
+      const shas = result.commits.map(c => c.sha)
+
+      const diff = await testGit.getCommitsFileDiff(shas, 'src.ts')
+      // Should have diffs from both commits
+      assert.ok(typeof diff === 'string')
+      assert.ok(diff.includes('src.ts'))
+    })
+  })
+
+  describe('getBranchFileDiff', () => {
+    it('should return diff for a specific file between branches', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      // Create a feature branch with changes
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'feature.ts'), 'const y = 1;\n')
+      execSync('git add feature.ts && git commit -m "Add feature.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Go back to main
+      execSync('git checkout master || git checkout main', { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getBranchFileDiff('feature', 'feature.ts')
+      assert.ok(diff.includes('feature.ts'))
+      assert.ok(diff.includes('+const y = 1;'))
+    })
+
+    it('should return empty string for file not changed in branch', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      // Create a feature branch with changes to a different file
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'other.ts'), 'const z = 1;\n')
+      execSync('git add other.ts && git commit -m "Add other.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Go back to main
+      execSync('git checkout master || git checkout main', { cwd: tempDir, stdio: 'ignore' })
+
+      // Request diff for a file that wasn't changed
+      const diff = await testGit.getBranchFileDiff('feature', 'README.md')
+      assert.strictEqual(diff.trim(), '')
+    })
+
+    it('should return empty string for non-existent branch', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      const diff = await testGit.getBranchFileDiff('non-existent-branch', 'README.md')
+      assert.strictEqual(diff, '')
+    })
+  })
+
   describe('getBranches', () => {
     it('should return an array of branches', async () => {
       const branches = await git.getBranches()

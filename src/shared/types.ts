@@ -49,6 +49,15 @@ export interface DiffFile {
   hunks: DiffHunk[];
 }
 
+/** File metadata without hunks (for lazy loading) */
+export interface DiffFileMetadata {
+  oldPath: string;
+  newPath: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed';
+  additions: number;
+  deletions: number;
+}
+
 export interface DiffHunk {
   oldStart: number;
   oldLines: number;

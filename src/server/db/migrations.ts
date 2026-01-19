@@ -118,6 +118,27 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    version: 6,
+    name: 'create_review_files_table',
+    up: `
+      CREATE TABLE review_files (
+        id TEXT PRIMARY KEY,
+        review_id TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        old_path TEXT,
+        status TEXT NOT NULL,
+        additions INTEGER NOT NULL DEFAULT 0,
+        deletions INTEGER NOT NULL DEFAULT 0,
+        hunks_data TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+      ) STRICT;
+
+      CREATE INDEX idx_review_files_review ON review_files(review_id);
+      CREATE UNIQUE INDEX idx_review_files_review_path ON review_files(review_id, file_path);
+    `,
+  },
 ]
 
 function getCurrentVersion (db: DatabaseSync): number {

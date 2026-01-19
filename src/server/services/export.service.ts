@@ -3,9 +3,10 @@
  */
 import type { DatabaseSync } from 'node:sqlite'
 import { ReviewRepository } from '../repositories/review.repo.ts'
+import { ReviewFileRepository } from '../repositories/review-file.repo.ts'
 import { CommentRepository } from '../repositories/comment.repo.ts'
 import { getDiffSummary } from './diff.service.ts'
-import type { DiffFile, DiffLine, Comment, RepositoryInfo, ReviewSourceType } from '../../shared/types.ts'
+import type { DiffFile, DiffLine, Comment, RepositoryInfo, ReviewSourceType, DiffSummary } from '../../shared/types.ts'
 
 function getSourceLabel (sourceType: ReviewSourceType, sourceRef: string | null): string {
   if (sourceType === 'staged') {
@@ -29,12 +30,32 @@ export interface ExportOptions {
   includeDiffSnippets?: boolean;
 }
 
+/** Snapshot data format (version 1 - legacy) */
+interface LegacySnapshotData {
+  files: DiffFile[];
+  repository: RepositoryInfo;
+}
+
+/** Snapshot data format (version 2 - new) */
+interface NewSnapshotData {
+  repository: RepositoryInfo;
+  version: 2;
+}
+
+type SnapshotData = LegacySnapshotData | NewSnapshotData
+
+function isNewFormat (snapshot: SnapshotData): snapshot is NewSnapshotData {
+  return 'version' in snapshot && snapshot.version === 2
+}
+
 export class ExportService {
   private reviewRepo: ReviewRepository
+  private fileRepo: ReviewFileRepository
   private commentRepo: CommentRepository
 
   constructor (db: DatabaseSync) {
     this.reviewRepo = new ReviewRepository(db)
+    this.fileRepo = new ReviewFileRepository(db)
     this.commentRepo = new CommentRepository(db)
   }
 
@@ -49,17 +70,58 @@ export class ExportService {
       return null
     }
 
-    const snapshot = JSON.parse(review.snapshotData) as {
-      files: DiffFile[];
-      repository: RepositoryInfo;
+    const snapshot = JSON.parse(review.snapshotData) as SnapshotData
+    const repository = snapshot.repository
+
+    // Get files and summary based on format
+    let files: DiffFile[]
+    let summary: DiffSummary
+
+    if (isNewFormat(snapshot)) {
+      // New format: get files from review_files table
+      // We need to get full file records with hunks for export
+      const reviewFilesMeta = this.fileRepo.findByReview(reviewId)
+      files = reviewFilesMeta.map((rf) => {
+        // Get full file record with hunks
+        const fullFile = this.fileRepo.findByReviewAndPath(reviewId, rf.filePath)
+        const hunks = fullFile ? ReviewFileRepository.parseHunks(fullFile.hunksData) : []
+        return {
+          oldPath: rf.oldPath ?? rf.filePath,
+          newPath: rf.filePath,
+          status: rf.status,
+          additions: rf.additions,
+          deletions: rf.deletions,
+          hunks,
+        }
+      })
+
+      // Calculate summary
+      let totalAdditions = 0
+      let totalDeletions = 0
+      for (const file of files) {
+        totalAdditions += file.additions
+        totalDeletions += file.deletions
+      }
+
+      summary = {
+        totalFiles: files.length,
+        totalAdditions,
+        totalDeletions,
+        filesAdded: files.filter((f) => f.status === 'added').length,
+        filesModified: files.filter((f) => f.status === 'modified').length,
+        filesDeleted: files.filter((f) => f.status === 'deleted').length,
+        filesRenamed: files.filter((f) => f.status === 'renamed').length,
+      }
+    } else {
+      // Legacy format: files embedded in snapshot_data
+      files = snapshot.files
+      summary = getDiffSummary(files)
     }
 
     const allComments = this.commentRepo.findByReview(reviewId)
     const comments = includeResolved
       ? allComments
       : allComments.filter((c) => !c.resolved)
-
-    const summary = getDiffSummary(snapshot.files)
 
     const lines: string[] = []
 
@@ -73,8 +135,8 @@ export class ExportService {
     lines.push('')
     lines.push('| Field | Value |')
     lines.push('|-------|-------|')
-    lines.push(`| Repository | ${snapshot.repository.name} |`)
-    lines.push(`| Branch | ${snapshot.repository.branch} |`)
+    lines.push(`| Repository | ${repository.name} |`)
+    lines.push(`| Branch | ${repository.branch} |`)
     lines.push(`| Source | ${sourceLabel} |`)
     lines.push(`| Status | ${formatStatus(review.status)} |`)
     lines.push(`| Created | ${formatDate(review.createdAt)} |`)
@@ -142,10 +204,12 @@ export class ExportService {
 
           // Include diff snippet if requested
           if (includeDiffSnippets && comment.lineNumber) {
-            const file = snapshot.files.find(
+            const file = files.find(
               (f) => f.newPath === filePath || f.oldPath === filePath
             )
-            if (file) {
+            // For new format, check if hunks are available (staged reviews have them)
+            const hasHunks = file && file.hunks && file.hunks.length > 0
+            if (file && hasHunks) {
               const snippet = getDiffSnippet(file, comment.lineNumber, comment.lineType)
               if (snippet) {
                 lines.push('```diff')
@@ -174,7 +238,7 @@ export class ExportService {
     // Files changed list
     lines.push('## Files Changed')
     lines.push('')
-    for (const file of snapshot.files) {
+    for (const file of files) {
       const path = file.newPath || file.oldPath
       const badge = {
         added: '🆕',

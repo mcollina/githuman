@@ -365,6 +365,72 @@ describe('review routes with staged changes', () => {
     })
   })
 
+  describe('GET /api/reviews/:id/files/hunks', () => {
+    let reviewId: string
+
+    it('should return hunks for a file in a review', async () => {
+      // Create a review first
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        payload: { sourceType: 'staged' },
+      })
+      const created = JSON.parse(createResponse.body)
+      reviewId = created.id
+
+      // Get the file path from the review
+      const filePath = created.files[0]?.newPath || 'test-file.ts'
+
+      // Request hunks using query parameter
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}/files/hunks?path=${encodeURIComponent(filePath)}`,
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.ok(Array.isArray(body.hunks))
+      assert.ok(body.hunks.length > 0, 'Should have at least one hunk')
+      // Verify hunk structure
+      const hunk = body.hunks[0]
+      assert.ok('oldStart' in hunk)
+      assert.ok('newStart' in hunk)
+      assert.ok('lines' in hunk)
+    })
+
+    it('should return 404 for non-existent review', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/reviews/non-existent-id/files/hunks?path=test.ts',
+      })
+
+      assert.strictEqual(response.statusCode, 404)
+    })
+
+    it('should return empty hunks for non-existent file', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}/files/hunks?path=non-existent-file.ts`,
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.deepStrictEqual(body.hunks, [])
+    })
+
+    it('should handle file paths with slashes', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/reviews/${reviewId}/files/hunks?path=${encodeURIComponent('src/components/Test.tsx')}`,
+      })
+
+      // Should not error - just return empty hunks for non-existent path
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.ok(Array.isArray(body.hunks))
+    })
+  })
+
   describe('review filtering and pagination', () => {
     it('should filter reviews by status', async () => {
       // Create two reviews

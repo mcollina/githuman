@@ -5,7 +5,9 @@ import { api } from './client'
 import type {
   Review,
   DiffFile,
+  DiffFileMetadata,
   DiffSummary,
+  DiffHunk,
   RepositoryInfo,
   CreateReviewRequest,
   UpdateReviewRequest,
@@ -13,9 +15,13 @@ import type {
 } from '../../shared/types'
 
 export interface ReviewWithDetails extends Omit<Review, 'snapshotData'> {
-  files: DiffFile[];
+  files: DiffFileMetadata[];
   summary: DiffSummary;
   repository: RepositoryInfo;
+}
+
+export interface FileHunksResponse {
+  hunks: DiffHunk[];
 }
 
 export interface ReviewListItem extends Omit<Review, 'snapshotData'> {
@@ -84,6 +90,9 @@ export const reviewsApi = {
   },
 
   get: (id: string) => api.get<ReviewWithDetails>(`/reviews/${id}`),
+
+  getFileHunks: (reviewId: string, filePath: string) =>
+    api.get<FileHunksResponse>(`/reviews/${reviewId}/files/hunks?path=${encodeURIComponent(filePath)}`),
 
   create: (data: CreateReviewRequest) => api.post<ReviewWithDetails, CreateReviewRequest>('/reviews', data),
 

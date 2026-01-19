@@ -224,6 +224,7 @@ export function ReviewPage () {
         selectedFile={selectedFile}
         onFileSelect={handleFileSelect}
         allowComments
+        reviewId={id}
         browseRef={browseRef}
         browseMode={browseMode}
         onBrowseModeChange={setBrowseMode}

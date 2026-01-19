@@ -209,4 +209,21 @@ export function getDiffSummary (files: DiffFile[]): DiffSummary {
   }
 }
 
+/**
+ * Parse a single file diff (for lazy loading per-file hunks)
+ */
+export function parseSingleFileDiff (diffText: string): DiffFile | null {
+  if (!diffText.trim()) {
+    return null
+  }
+
+  const fileDiffs = splitIntoFiles(diffText)
+  if (fileDiffs.length === 0) {
+    return null
+  }
+
+  // Return the first parsed file (there should only be one for a single-file diff)
+  return parseFileDiff(fileDiffs[0])
+}
+
 export type { DiffSummary } from '../../shared/types.ts'

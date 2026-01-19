@@ -6,15 +6,16 @@ import { DiffView } from './DiffView'
 import { useCommentContext } from '../../contexts/CommentContext'
 import { useFileTree } from '../../hooks/useFileTree'
 import { cn } from '../../lib/utils'
-import type { DiffFile, DiffSummary, FileTreeNode } from '../../../shared/types'
+import type { DiffFile, DiffFileMetadata, DiffSummary, FileTreeNode } from '../../../shared/types'
 
 interface BrowsableDiffViewProps {
   // Diff data
-  files: DiffFile[];
+  files: (DiffFileMetadata | DiffFile)[];
   summary?: DiffSummary;
   selectedFile?: string;
   onFileSelect?: (path: string) => void;
   allowComments?: boolean;
+  reviewId?: string; // If provided, enables lazy loading of hunks
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
 
   // Staging props (for unstaged view)
@@ -89,6 +90,7 @@ export function BrowsableDiffView ({
   selectedFile,
   onFileSelect,
   allowComments = false,
+  reviewId,
   onLineClick,
   showStageButtons,
   onStageFile,
@@ -232,6 +234,7 @@ export function BrowsableDiffView ({
               summary={summary}
               selectedFile={effectiveSelectedFile}
               allowComments={allowComments}
+              reviewId={reviewId}
               onLineClick={onLineClick}
             />
             )}

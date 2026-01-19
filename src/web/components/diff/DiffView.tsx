@@ -1,16 +1,17 @@
 import { DiffFile } from './DiffFile'
-import type { DiffFile as DiffFileType, DiffSummary } from '../../../shared/types'
+import type { DiffFile as DiffFileType, DiffFileMetadata, DiffSummary } from '../../../shared/types'
 
 interface DiffViewProps {
-  files: DiffFileType[];
+  files: (DiffFileMetadata | DiffFileType)[];
   summary?: DiffSummary;
   selectedFile?: string;
   forceExpandedFile?: string;
   allowComments?: boolean;
+  reviewId?: string; // If provided, enables lazy loading of hunks
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
 }
 
-export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, onLineClick }: DiffViewProps) {
+export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick }: DiffViewProps) {
   if (files.length === 0) {
     return (
       <div className='flex-1 flex items-center justify-center text-[var(--gh-text-muted)]'>
@@ -74,6 +75,7 @@ export function DiffView ({ files, summary, selectedFile, forceExpandedFile, all
             <DiffFile
               key={filePath}
               file={file}
+              reviewId={reviewId}
               defaultExpanded={files.length <= 5}
               forceExpanded={shouldForceExpand}
               allowComments={allowComments}

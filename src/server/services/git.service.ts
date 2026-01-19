@@ -431,6 +431,19 @@ export class GitService {
   }
 
   /**
+   * Get diff for a specific file between current branch and another branch
+   */
+  async getBranchFileDiff (targetBranch: string, filePath: string): Promise<string> {
+    try {
+      const diff = await this.git.diff([`HEAD...${targetBranch}`, '--', filePath])
+      return diff
+    } catch (err) {
+      this.log?.debug({ err, targetBranch, filePath }, 'getBranchFileDiff failed')
+      return ''
+    }
+  }
+
+  /**
    * Get diff for specific commits
    */
   async getCommitsDiff (commits: string[]): Promise<string> {
@@ -451,6 +464,30 @@ export class GitService {
       const diff = await this.git.show([commit, '--format='])
       if (diff.trim()) {
         diffs.push(diff)
+      }
+    }
+    return diffs.join('\n')
+  }
+
+  /**
+   * Get diff for a specific file across specific commits
+   */
+  async getCommitsFileDiff (commits: string[], filePath: string): Promise<string> {
+    if (commits.length === 0) {
+      return ''
+    }
+
+    // Collect diffs for this file from all commits
+    const diffs: string[] = []
+    for (const commit of commits) {
+      try {
+        const diff = await this.git.show([commit, '--format=', '--', filePath])
+        if (diff.trim()) {
+          diffs.push(diff)
+        }
+      } catch (err) {
+        this.log?.debug({ err, commit, filePath }, 'getCommitsFileDiff failed for commit')
+        // Continue with other commits
       }
     }
     return diffs.join('\n')

@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../hooks/useMediaQuery'
-import type { DiffFile } from '../../../shared/types'
+import type { DiffFile, DiffFileMetadata } from '../../../shared/types'
 
 interface SidebarProps {
-  files: DiffFile[];
+  files: (DiffFileMetadata | DiffFile)[];
   selectedFile?: string;
   onFileSelect: (path: string) => void;
   selectedIndex?: number;
@@ -17,7 +17,7 @@ interface SidebarProps {
   onMobileDrawerChange?: (open: boolean) => void;
 }
 
-function getStatusColor (status: DiffFile['status']) {
+function getStatusColor (status: DiffFileMetadata['status']) {
   switch (status) {
     case 'added':
       return 'text-[var(--gh-success)]'
@@ -32,7 +32,7 @@ function getStatusColor (status: DiffFile['status']) {
   }
 }
 
-function getStatusLabel (status: DiffFile['status']) {
+function getStatusLabel (status: DiffFileMetadata['status']) {
   switch (status) {
     case 'added':
       return 'A'

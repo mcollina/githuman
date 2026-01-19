@@ -32,7 +32,7 @@ const DiffHunkSchema = Type.Object({
   lines: Type.Array(DiffLineSchema),
 })
 
-const DiffFileSchema = Type.Object(
+const DiffFileMetadataSchema = Type.Object(
   {
     oldPath: Type.String({ description: 'Original file path' }),
     newPath: Type.String({ description: 'New file path' }),
@@ -44,9 +44,8 @@ const DiffFileSchema = Type.Object(
     ]),
     additions: Type.Integer({ description: 'Number of lines added' }),
     deletions: Type.Integer({ description: 'Number of lines deleted' }),
-    hunks: Type.Array(DiffHunkSchema),
   },
-  { description: 'Diff file' }
+  { description: 'Diff file metadata (without hunks for lazy loading)' }
 )
 
 const DiffSummarySchema = Type.Object(
@@ -85,12 +84,18 @@ const ReviewWithDetailsSchema = Type.Object(
     sourceType: ReviewSourceTypeSchema,
     sourceRef: Type.Union([Type.String(), Type.Null()]),
     status: ReviewStatusSchema,
-    files: Type.Array(DiffFileSchema),
+    files: Type.Array(DiffFileMetadataSchema),
     summary: DiffSummarySchema,
+    repository: Type.Object({
+      name: Type.String(),
+      branch: Type.String(),
+      remote: Type.Union([Type.String(), Type.Null()]),
+      path: Type.String(),
+    }),
     createdAt: Type.String({ format: 'date-time' }),
     updatedAt: Type.String({ format: 'date-time' }),
   },
-  { description: 'Review with full diff details' }
+  { description: 'Review with file metadata (hunks loaded separately)' }
 )
 
 const CreateReviewSchema = Type.Object(
@@ -139,6 +144,18 @@ const ReviewStatsSchema = Type.Object(
 
 const ReviewParamsSchema = Type.Object({
   id: Type.String({ description: 'Review ID' }),
+})
+
+const FileHunksParamsSchema = Type.Object({
+  id: Type.String({ description: 'Review ID' }),
+})
+
+const FileHunksQuerySchema = Type.Object({
+  path: Type.String({ description: 'File path' }),
+})
+
+const FileHunksResponseSchema = Type.Object({
+  hunks: Type.Array(DiffHunkSchema),
 })
 
 const ExportQuerystringSchema = Type.Object({
@@ -213,13 +230,13 @@ const reviewRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   /**
    * GET /api/reviews/:id
-   * Get a review with full diff data
+   * Get a review with file metadata (without hunks)
    */
   fastify.get('/api/reviews/:id', {
     schema: {
       tags: ['reviews'],
       summary: 'Get a review by ID',
-      description: 'Retrieve a specific review with full diff data',
+      description: 'Retrieve a specific review with file metadata (hunks loaded separately)',
       params: ReviewParamsSchema,
       response: {
         200: ReviewWithDetailsSchema,
@@ -237,6 +254,46 @@ const reviewRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     }
 
     return review
+  })
+
+  /**
+   * GET /api/reviews/:id/files/hunks
+   * Get hunks for a specific file in a review (lazy loading)
+   */
+  fastify.get('/api/reviews/:id/files/hunks', {
+    schema: {
+      tags: ['reviews'],
+      summary: 'Get file hunks',
+      description: 'Retrieve diff hunks for a specific file in a review. For staged reviews, hunks are loaded from database. For committed reviews, hunks are regenerated from git.',
+      params: FileHunksParamsSchema,
+      querystring: FileHunksQuerySchema,
+      response: {
+        200: FileHunksResponseSchema,
+        400: ErrorSchema,
+        404: ErrorSchema,
+      },
+    },
+  }, async (request, reply) => {
+    const service = getService()
+    const filePath = request.query.path
+
+    if (!filePath) {
+      return reply.code(400).send({
+        error: 'File path is required',
+      })
+    }
+
+    try {
+      const hunks = await service.getFileHunks(request.params.id, filePath)
+      return { hunks }
+    } catch (err) {
+      if (err instanceof ReviewError && err.code === 'NOT_FOUND') {
+        return reply.code(404).send({
+          error: 'Review not found',
+        })
+      }
+      throw err
+    }
   })
 
   /**
