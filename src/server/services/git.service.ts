@@ -370,6 +370,38 @@ export class GitService {
   }
 
   /**
+   * Get file content from the working directory (disk)
+   */
+  async getWorkingFileContent (filePath: string): Promise<string | null> {
+    try {
+      const { readFile } = await import('node:fs/promises')
+      const { join, resolve, normalize } = await import('node:path')
+
+      // Normalize and validate the path to prevent directory traversal
+      const normalizedPath = normalize(filePath)
+      if (normalizedPath.startsWith('..') || normalizedPath.includes('../')) {
+        this.log?.warn({ filePath }, 'Directory traversal attempt blocked')
+        return null
+      }
+
+      const fullPath = join(this.repoPath, normalizedPath)
+      const resolvedPath = resolve(fullPath)
+      const resolvedRepo = resolve(this.repoPath)
+
+      // Ensure the resolved path is within the repository
+      if (!resolvedPath.startsWith(resolvedRepo)) {
+        this.log?.warn({ filePath, resolvedPath, resolvedRepo }, 'Path outside repository blocked')
+        return null
+      }
+
+      return await readFile(fullPath, 'utf-8')
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getWorkingFileContent failed')
+      return null
+    }
+  }
+
+  /**
    * Get file content from a specific commit/ref
    */
   async getFileContentAtRef (filePath: string, ref: string): Promise<string | null> {
@@ -416,6 +448,39 @@ export class GitService {
       return result
     } catch (err) {
       this.log?.debug({ err, filePath }, 'getHeadBinaryContent failed')
+      return null
+    }
+  }
+
+  /**
+   * Get binary file content from the working directory
+   * This reads the file directly from disk, not from git
+   */
+  async getWorkingBinaryContent (filePath: string): Promise<Buffer | null> {
+    try {
+      const { readFile } = await import('node:fs/promises')
+      const { join, resolve, normalize } = await import('node:path')
+
+      // Normalize and validate the path to prevent directory traversal
+      const normalizedPath = normalize(filePath)
+      if (normalizedPath.startsWith('..') || normalizedPath.includes('../')) {
+        this.log?.warn({ filePath }, 'Directory traversal attempt blocked')
+        return null
+      }
+
+      const fullPath = join(this.repoPath, normalizedPath)
+      const resolvedPath = resolve(fullPath)
+      const resolvedRepo = resolve(this.repoPath)
+
+      // Ensure the resolved path is within the repository
+      if (!resolvedPath.startsWith(resolvedRepo)) {
+        this.log?.warn({ filePath, resolvedPath, resolvedRepo }, 'Path outside repository blocked')
+        return null
+      }
+
+      return await readFile(fullPath)
+    } catch (err) {
+      this.log?.debug({ err, filePath }, 'getWorkingBinaryContent failed')
       return null
     }
   }

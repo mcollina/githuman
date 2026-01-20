@@ -14,6 +14,7 @@ interface DiffFileProps {
   forceExpanded?: boolean;
   allowComments?: boolean;
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
+  version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
 }
 
 function hasHunks (file: DiffFileMetadata | DiffFileType): file is DiffFileType {
@@ -42,7 +43,7 @@ function getStatusBadge (status: DiffFileMetadata['status']) {
   )
 }
 
-export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick }: DiffFileProps) {
+export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick, version = 'staged' }: DiffFileProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [loadedHunks, setLoadedHunks] = useState<DiffHunkType[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -183,7 +184,7 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
                   )
                 : isMarkdown
                   ? (
-                    <MarkdownDiff file={fileWithHunks} allowComments={allowComments} />
+                    <MarkdownDiff file={fileWithHunks} allowComments={allowComments} version={version} />
                     )
                   : !hunks || hunks.length === 0
                       ? (

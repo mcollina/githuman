@@ -9,9 +9,10 @@ interface DiffViewProps {
   allowComments?: boolean;
   reviewId?: string; // If provided, enables lazy loading of hunks
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
+  version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
 }
 
-export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick }: DiffViewProps) {
+export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick, version = 'staged' }: DiffViewProps) {
   if (files.length === 0) {
     return (
       <div className='flex-1 flex items-center justify-center text-[var(--gh-text-muted)]'>
@@ -80,6 +81,7 @@ export function DiffView ({ files, summary, selectedFile, forceExpandedFile, all
               forceExpanded={shouldForceExpand}
               allowComments={allowComments}
               onLineClick={onLineClick}
+              version={version}
             />
           )
         })}

@@ -13,11 +13,12 @@ export { isMarkdownFile }
 interface MarkdownDiffProps {
   file: DiffFile;
   allowComments?: boolean;
+  version?: 'staged' | 'working';
 }
 
 type ViewMode = 'diff' | 'preview' | 'split'
 
-export function MarkdownDiff ({ file, allowComments = false }: MarkdownDiffProps) {
+export function MarkdownDiff ({ file, allowComments = false, version = 'staged' }: MarkdownDiffProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('diff')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,11 +40,11 @@ export function MarkdownDiff ({ file, allowComments = false }: MarkdownDiffProps
     setError(null)
 
     diffApi
-      .getFileContent(filePath, 'staged')
+      .getFileContent(filePath, version)
       .then(setFileContent)
       .catch((err) => setError(err.message || 'Failed to load markdown'))
       .finally(() => setLoading(false))
-  }, [filePath, viewMode, fileContent])
+  }, [filePath, viewMode, fileContent, version])
 
   const markdownContent = fileContent?.lines.join('\n') ?? ''
 
@@ -107,6 +108,7 @@ export function MarkdownDiff ({ file, allowComments = false }: MarkdownDiffProps
               content={markdownContent}
               loading={loading}
               error={error}
+              version={version}
             />
             )
           : (
@@ -125,6 +127,7 @@ export function MarkdownDiff ({ file, allowComments = false }: MarkdownDiffProps
                   content={markdownContent}
                   loading={loading}
                   error={error}
+                  version={version}
                 />
               </div>
             </div>

@@ -17,6 +17,7 @@ interface BrowsableDiffViewProps {
   allowComments?: boolean;
   reviewId?: string; // If provided, enables lazy loading of hunks
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
+  version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
 
   // Staging props (for unstaged view)
   showStageButtons?: boolean;
@@ -92,6 +93,7 @@ export function BrowsableDiffView ({
   allowComments = false,
   reviewId,
   onLineClick,
+  version = 'staged',
   showStageButtons,
   onStageFile,
   staging,
@@ -236,6 +238,7 @@ export function BrowsableDiffView ({
               allowComments={allowComments}
               reviewId={reviewId}
               onLineClick={onLineClick}
+              version={version}
             />
             )}
       </div>

@@ -109,9 +109,9 @@ const RepositoryInfoExtendedSchema = Type.Intersect([
 
 const FileVersionQuerystringSchema = Type.Object({
   version: Type.Optional(
-    Type.Union([Type.Literal('staged'), Type.Literal('head')], {
+    Type.Union([Type.Literal('staged'), Type.Literal('head'), Type.Literal('working')], {
       default: 'staged',
-      description: 'File version to retrieve',
+      description: 'File version to retrieve: staged (index), head (last commit), or working (disk)',
     })
   ),
 })
@@ -119,7 +119,7 @@ const FileVersionQuerystringSchema = Type.Object({
 const FileContentResponseSchema = Type.Object(
   {
     path: Type.String({ description: 'File path' }),
-    version: Type.Union([Type.Literal('staged'), Type.Literal('head')]),
+    version: Type.Union([Type.Literal('staged'), Type.Literal('head'), Type.Literal('working')]),
     content: Type.String({ description: 'File content' }),
     lines: Type.Array(Type.String(), { description: 'Lines array' }),
     lineCount: Type.Integer({ description: 'Number of lines' }),
@@ -382,10 +382,19 @@ const diffRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.code(400).send({ error: 'Not a git repository' })
     }
 
-    const content =
-      version === 'head'
-        ? await gitService.getHeadFileContent(filePath)
-        : await gitService.getStagedFileContent(filePath)
+    let content: string | null = null
+
+    if (version === 'head') {
+      content = await gitService.getHeadFileContent(filePath)
+    } else if (version === 'working') {
+      content = await gitService.getWorkingFileContent(filePath)
+    } else {
+      // Default to staged, fall back to working if not found
+      content = await gitService.getStagedFileContent(filePath)
+      if (content === null) {
+        content = await gitService.getWorkingFileContent(filePath)
+      }
+    }
 
     if (content === null) {
       return reply.code(404).send({ error: 'File not found' })
@@ -448,10 +457,19 @@ const imageRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.code(400).send({ error: 'Not a git repository' })
     }
 
-    const content =
-      version === 'head'
-        ? await gitService.getHeadBinaryContent(filePath)
-        : await gitService.getStagedBinaryContent(filePath)
+    let content: Buffer | null = null
+
+    if (version === 'head') {
+      content = await gitService.getHeadBinaryContent(filePath)
+    } else if (version === 'working') {
+      content = await gitService.getWorkingBinaryContent(filePath)
+    } else {
+      // Default to staged, but fall back to working directory if not found in staging
+      content = await gitService.getStagedBinaryContent(filePath)
+      if (content === null) {
+        content = await gitService.getWorkingBinaryContent(filePath)
+      }
+    }
 
     if (content === null) {
       return reply.code(404).send({ error: 'Image not found' })

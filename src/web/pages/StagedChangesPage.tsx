@@ -389,6 +389,7 @@ export function StagedChangesPage () {
                         ? handleUnstagedLineClick
                         : (activeTab === 'staged' && !reviewId ? handleLineClick : undefined)
                     }
+                    version={activeTab === 'unstaged' ? 'working' : 'staged'}
                     showStageButtons={activeTab === 'unstaged'}
                     onStageFile={handleStageFile}
                     staging={staging}

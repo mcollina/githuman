@@ -17,9 +17,10 @@ interface MarkdownPreviewProps {
   content: string;
   loading?: boolean;
   error?: string | null;
+  version?: 'staged' | 'working';
 }
 
-export function MarkdownPreview ({ content, loading, error }: MarkdownPreviewProps) {
+export function MarkdownPreview ({ content, loading, error, version = 'staged' }: MarkdownPreviewProps) {
   if (loading) {
     return (
       <div className='p-4 text-center text-[var(--gh-text-muted)]'>
@@ -158,10 +159,19 @@ export function MarkdownPreview ({ content, loading, error }: MarkdownPreviewPro
           ),
           // Style paragraphs
           p: ({ children }) => <p className='my-2 leading-relaxed text-[var(--gh-text-secondary)]'>{children}</p>,
-          // Style images
-          img: ({ src, alt }) => (
-            <img src={src} alt={alt} className='max-w-full h-auto rounded-lg my-4' />
-          ),
+          // Style images - transform relative paths to use the git file API
+          img: ({ src, alt }) => {
+            let imageSrc = src
+            // Transform relative paths to use the git image API
+            if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
+              // Remove leading ./ if present
+              const cleanPath = src.startsWith('./') ? src.slice(2) : src
+              imageSrc = `/api/diff/image/${cleanPath}?version=${version}`
+            }
+            return (
+              <img src={imageSrc} alt={alt} className='max-w-full h-auto rounded-lg my-4' />
+            )
+          },
           // Style horizontal rules
           hr: () => <hr className='my-6 border-t border-[var(--gh-border)]' />,
           // Style strikethrough (GFM)
