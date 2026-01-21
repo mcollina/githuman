@@ -162,8 +162,9 @@ async function main() {
     console.log('Creating side-by-side comparison...');
     await createSideBySideComparison(page);
 
-    // Video 9: Workflow demo
+    // Video 9: Workflow demo - delete existing reviews first for a clean slate
     console.log('Recording workflow demo video...');
+    await deleteAllReviews();
     await recordWorkflowDemo(browser);
 
     // Copy screenshots to website folder
@@ -208,6 +209,19 @@ async function waitForServer(server: ChildProcess): Promise<void> {
     await setTimeout(500);
   }
   throw new Error('Server failed to start');
+}
+
+async function deleteAllReviews(): Promise<void> {
+  try {
+    const response = await fetch(`${BASE_URL}/api/reviews`);
+    if (!response.ok) return;
+    const data = await response.json();
+    for (const review of data.reviews || []) {
+      await fetch(`${BASE_URL}/api/reviews/${review.id}`, { method: 'DELETE' });
+    }
+  } catch (err) {
+    console.warn('Failed to delete reviews:', err);
+  }
 }
 
 async function addCommentWithSuggestion(reviewId: string): Promise<void> {
@@ -387,18 +401,19 @@ function escapeHtml(text: string): string {
 }
 
 async function recordWorkflowDemo(browser: Browser): Promise<void> {
-  // First, pre-load the page without recording to warm up
+  // First, warm up by loading the page in a non-recording context
   const warmupContext = await browser.newContext({
     viewport: { width: 1280, height: 720 },
   });
   const warmupPage = await warmupContext.newPage();
   await warmupPage.goto(BASE_URL);
   await warmupPage.waitForSelector('text=Staged');
-  await setTimeout(2000); // Wait for syntax highlighting
+  await warmupPage.waitForSelector('.shiki span[style], code span[style*="color"]', { timeout: 10000 }).catch(() => {});
+  await setTimeout(3000);
   await warmupContext.close();
 
-  // Now create context with video recording - page will load faster
-  const context = await browser.newContext({
+  // Create recording context starting with a dark background that matches the app
+  const recordContext = await browser.newContext({
     viewport: { width: 1280, height: 720 },
     recordVideo: {
       dir: SCREENSHOT_DIR,
@@ -406,80 +421,139 @@ async function recordWorkflowDemo(browser: Browser): Promise<void> {
     },
   });
 
-  const page = await context.newPage();
+  const recordPage = await recordContext.newPage();
 
-  // Listen for errors
-  page.on('console', msg => {
-    if (msg.type() === 'error') {
-      console.log('Browser error:', msg.text());
-    }
-  });
+  // Start with a dark page that matches the app background
+  await recordPage.setContent(`
+    <html>
+      <body style="margin:0;padding:0;background:#0d1117;min-height:100vh;"></body>
+    </html>
+  `);
+  await setTimeout(200);
 
-  // Demo workflow: Staged changes with commenting
-  // Step 1: Navigate to staged changes (should load quickly now)
-  await page.goto(BASE_URL);
-  await page.waitForSelector('text=Staged');
-  await setTimeout(1500); // Brief pause to show the view
+  // Navigate to the app - page should load quickly from browser cache
+  await recordPage.goto(BASE_URL);
+  await recordPage.waitForSelector('text=Staged');
+  await recordPage.waitForSelector('.shiki span[style], code span[style*="color"]', { timeout: 10000 }).catch(() => {});
+  await recordPage.waitForSelector('.gh-spinner', { state: 'hidden', timeout: 5000 }).catch(() => {});
 
-  // Step 2: Scroll through the diff to show the code
-  await page.mouse.move(640, 400);
-  await page.mouse.wheel(0, 200);
+  // Wait until fully loaded
+  await recordPage.waitForFunction(() => {
+    const spinners = document.querySelectorAll('.gh-spinner, [class*="spinner"], [class*="loading"]');
+    return spinners.length === 0 || Array.from(spinners).every(s => {
+      const style = window.getComputedStyle(s);
+      return style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0';
+    });
+  }, { timeout: 5000 }).catch(() => {});
+
+  // === DEMO STARTS HERE ===
+
+  // Step 1: Show the staged view - browse the diff
+  await setTimeout(2000);
+
+  // Step 2: Scroll down through the diff slowly to show the code
+  await recordPage.mouse.move(640, 400);
+  await recordPage.mouse.wheel(0, 150);
   await setTimeout(800);
+  await recordPage.mouse.wheel(0, 150);
+  await setTimeout(800);
+  await recordPage.mouse.wheel(0, 100);
+  await setTimeout(1000);
 
-  // Step 3: Click on a line to add a comment
-  // Find an added line (green) and click on it
-  const addedLine = page.locator('[class*="diff-add"], [class*="added"], .line-added, tr:has(.diff-code-add)').first();
-  if (await addedLine.isVisible()) {
-    await addedLine.hover();
+  // Step 3: Scroll back up to see the full file
+  await recordPage.mouse.wheel(0, -300);
+  await setTimeout(1000);
+
+  // Step 4: Toggle to "Full" view mode to show full file view
+  const fullButton = recordPage.locator('button:has-text("Full")').first();
+  if (await fullButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await fullButton.click();
+    await setTimeout(1500);
+
+    // Scroll down in full view
+    await recordPage.mouse.wheel(0, 200);
+    await setTimeout(1000);
+
+    // Switch back to diff view
+    const diffButton = recordPage.locator('button:has-text("Diff")').first();
+    if (await diffButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await diffButton.click();
+      await setTimeout(1000);
+    }
+  }
+
+  // Step 5: Create a review from staged changes
+  const createButton = recordPage.locator('button:has-text("Create Review"), button:has-text("Create"):not(:has-text("Creating"))').first();
+  if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await createButton.click();
+    await recordPage.waitForURL(/\/reviews\//, { timeout: 5000 }).catch(() => {});
+    await recordPage.waitForSelector('.shiki span[style], code span[style*="color"]', { timeout: 10000 }).catch(() => {});
+    await setTimeout(1500);
+  }
+
+  // Step 6: Click on a diff line to add a comment
+  const diffLine = recordPage.locator('.border-l-4.cursor-pointer').nth(5);
+  if (await diffLine.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await diffLine.click();
     await setTimeout(500);
 
-    // Look for the comment button/icon that appears on hover
-    const commentButton = page.locator('[data-testid="add-comment"], [class*="comment-button"], button[title*="comment"], .add-comment-btn, [aria-label*="comment"]').first();
-    if (await commentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await commentButton.click();
-      await setTimeout(500);
+    // Step 7: Type a comment in the textarea
+    const commentTextarea = recordPage.locator('textarea[placeholder="Write a comment..."]').first();
+    if (await commentTextarea.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const commentText = 'Consider adding input validation here';
+      for (const char of commentText) {
+        await commentTextarea.type(char, { delay: 30 });
+      }
+      await setTimeout(800);
 
-      // Type a comment
-      const commentInput = page.locator('textarea, [contenteditable="true"], input[type="text"]').first();
-      if (await commentInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await commentInput.fill('This function needs input validation');
-        await setTimeout(1000);
-
-        // Submit the comment
-        const submitButton = page.locator('button:has-text("Add"), button:has-text("Submit"), button:has-text("Comment"), button[type="submit"]').first();
-        if (await submitButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await submitButton.click();
-          await setTimeout(1500);
-        }
+      // Step 8: Submit the comment
+      const addCommentButton = recordPage.locator('button:has-text("Add Comment")').first();
+      if (await addCommentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await addCommentButton.click();
+        await setTimeout(1500);
       }
     }
   }
 
-  // Step 4: Scroll back up
-  await page.mouse.wheel(0, -200);
-  await setTimeout(800);
+  // Step 9: Show the comment appeared
+  await setTimeout(1500);
 
-  // Step 5: Create a review from staged changes
-  const createButton = page.locator('text=Create Review').first();
-  if (await createButton.isVisible()) {
-    await createButton.click();
-    await page.waitForURL(/\/reviews\//, { timeout: 5000 }).catch(() => {});
+  // Step 10: Navigate to reviews list to show the review was created
+  const reviewsLink = recordPage.locator('a:has-text("Reviews")').first();
+  if (await reviewsLink.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await reviewsLink.click();
+    await recordPage.waitForSelector('text=Reviews', { timeout: 3000 }).catch(() => {});
     await setTimeout(1500);
   }
 
-  // Step 6: Show the review page briefly
+  // Final pause
   await setTimeout(1000);
 
   // Close context to save the video
-  await context.close();
+  await recordContext.close();
 
-  // Rename the video file to a consistent name
+  // Find and process the video file
   const files = readdirSync(SCREENSHOT_DIR);
-  const videoFile = files.find(f => f.endsWith('.webm'));
+  const videoFile = files.find(f => f.endsWith('.webm') && f !== 'workflow-demo.webm');
   if (videoFile) {
-    renameSync(`${SCREENSHOT_DIR}/${videoFile}`, `${SCREENSHOT_DIR}/workflow-demo.webm`);
-    cpSync(`${SCREENSHOT_DIR}/workflow-demo.webm`, 'website/workflow-demo.webm');
-    console.log('Workflow demo saved as workflow-demo.webm');
+    const rawVideoPath = `${SCREENSHOT_DIR}/${videoFile}`;
+    const trimmedVideoPath = `${SCREENSHOT_DIR}/workflow-demo.webm`;
+
+    // Use ffmpeg to trim the first 0.5 seconds (loading screen)
+    try {
+      execSync(`ffmpeg -y -i "${rawVideoPath}" -ss 0.5 -c copy "${trimmedVideoPath}"`, {
+        stdio: 'pipe',
+      });
+      // Remove the raw video
+      unlinkSync(rawVideoPath);
+      console.log('Workflow demo trimmed and saved as workflow-demo.webm');
+    } catch (err) {
+      // Fallback: just rename if ffmpeg fails
+      console.log('ffmpeg not available, using untrimmed video');
+      renameSync(rawVideoPath, trimmedVideoPath);
+    }
+
+    cpSync(trimmedVideoPath, 'website/workflow-demo.webm');
   }
 }
 
