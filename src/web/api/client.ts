@@ -24,6 +24,11 @@ export class ApiClientError extends Error {
 
 async function handleResponse<T> (response: Response): Promise<T> {
   if (!response.ok) {
+    // Clear token on 401 Unauthorized - token is invalid
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token')
+    }
+
     const data = (await response.json().catch(() => ({}))) as ApiError
     throw new ApiClientError(
       data.error || `HTTP ${response.status}`,

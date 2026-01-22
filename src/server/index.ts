@@ -26,6 +26,18 @@ export async function startServer (config: ServerConfig, options: AppOptions = {
 
   try {
     await app.listen({ port: config.port, host: config.host })
+
+    // Log URLs with token for easy access (double-clickable in terminals)
+    if (config.authToken) {
+      const addresses = app.addresses()
+      for (const addr of addresses) {
+        if (addr.family === 'IPv4') {
+          const url = `http://${addr.address}:${addr.port}?token=${config.authToken}`
+          app.log.info(`GitHuman running at: ${url}`)
+        }
+      }
+      app.log.info('Authentication enabled')
+    }
   } catch (err) {
     app.log.error(err)
     closeDatabase()
