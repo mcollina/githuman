@@ -1,16 +1,93 @@
 /**
  * MarkdownPreview - shared component for rendering markdown content
  */
+import { useState, useEffect, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import { codeToHtml, bundledLanguages, type BundledLanguage } from 'shiki'
 
 const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdx', 'mdown', 'mkd'])
+
+// Custom sanitize schema that preserves syntax highlighting styles
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    // Allow class and style on common elements for syntax highlighting
+    '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'class', 'style'],
+    span: [...(defaultSchema.attributes?.span || []), 'style', 'class'],
+    pre: [...(defaultSchema.attributes?.pre || []), 'style', 'class'],
+    code: [...(defaultSchema.attributes?.code || []), 'style', 'class', 'className'],
+  },
+}
 
 export function isMarkdownFile (filePath: string): boolean {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
   return MARKDOWN_EXTENSIONS.has(ext)
+}
+
+// Extract text content from React children
+function extractTextFromChildren (children: ReactNode): string {
+  if (typeof children === 'string') {
+    return children
+  }
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join('')
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    const props = children.props as { children?: ReactNode }
+    return extractTextFromChildren(props.children)
+  }
+  return ''
+}
+
+interface HighlightedCodeBlockProps {
+  language: string
+  code: string
+}
+
+function HighlightedCodeBlock ({ language, code }: HighlightedCodeBlockProps) {
+  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    // Check if language is supported by shiki
+    const lang = language in bundledLanguages ? language as BundledLanguage : 'text'
+
+    codeToHtml(code, {
+      lang,
+      theme: 'github-dark'
+    }).then(html => {
+      if (!cancelled) {
+        setHighlightedHtml(html)
+      }
+    }).catch(() => {
+      // Fall back to no highlighting on error
+    })
+
+    return () => { cancelled = true }
+  }, [language, code])
+
+  if (highlightedHtml) {
+    // Shiki returns a complete <pre><code>...</code></pre> structure
+    // We wrap it and apply our container styles
+    return (
+      <div
+        className='shiki-wrapper [&>pre]:bg-[var(--gh-bg-primary)] [&>pre]:text-[var(--gh-text-primary)] [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:border [&>pre]:border-[var(--gh-border)]'
+        dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+      />
+    )
+  }
+
+  // Fallback while loading or on error
+  return (
+    <pre className='bg-[var(--gh-bg-primary)] text-[var(--gh-text-primary)] p-4 rounded-lg overflow-x-auto text-sm border border-[var(--gh-border)]'>
+      <code>{code}</code>
+    </pre>
+  )
 }
 
 interface MarkdownPreviewProps {
@@ -50,25 +127,27 @@ export function MarkdownPreview ({ content, loading, error, version = 'staged' }
     <div className='p-4 sm:p-6 prose prose-sm prose-invert max-w-none overflow-x-auto'>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
-          // Style code blocks
-          pre: ({ children }) => (
-            <pre className='bg-[var(--gh-bg-primary)] text-[var(--gh-text-primary)] p-4 rounded-lg overflow-x-auto text-sm border border-[var(--gh-border)]'>
-              {children}
-            </pre>
-          ),
+          // Handle code blocks with syntax highlighting
           code: ({ className, children, ...props }) => {
-            const isInline = !className
-            if (isInline) {
-              return (
-                <code className='bg-[var(--gh-bg-surface)] text-[var(--gh-accent-primary)] px-1.5 py-0.5 rounded text-sm' {...props}>
-                  {children}
-                </code>
-              )
+            // Check if this is a code block (has language class) vs inline code
+            const match = className?.match(/language-(\w+)/)
+            if (match) {
+              // Code block - extract text and highlight with shiki
+              const language = match[1]
+              const code = extractTextFromChildren(children).replace(/\n$/, '')
+              return <HighlightedCodeBlock language={language} code={code} />
             }
-            return <code {...props}>{children}</code>
+            // Inline code
+            return (
+              <code className='bg-[var(--gh-bg-surface)] text-[var(--gh-accent-primary)] px-1.5 py-0.5 rounded text-sm' {...props}>
+                {children}
+              </code>
+            )
           },
+          // Remove default pre wrapper for code blocks (HighlightedCodeBlock provides its own)
+          pre: ({ children }) => <>{children}</>,
           // Style links
           a: ({ children, ...props }) => (
             <a className='text-[var(--gh-accent-primary)] hover:underline' {...props}>

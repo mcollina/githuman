@@ -62,5 +62,32 @@ export default async function globalSetup () {
   execSync('git add config.ts', { cwd: TEST_REPO_PATH, stdio: 'ignore' })
   execSync('git commit -m "Add configuration module"', { cwd: TEST_REPO_PATH, stdio: 'ignore' })
 
+  // Create a markdown file with code blocks for syntax highlighting tests
+  mkdirSync(join(TEST_REPO_PATH, 'docs'), { recursive: true })
+  const markdownWithCode = `# Code Examples
+
+## TypeScript
+
+\`\`\`typescript
+function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+## JavaScript
+
+\`\`\`javascript
+const sum = (a, b) => a + b;
+console.log(sum(1, 2));
+\`\`\`
+
+## Inline code
+
+Use \`npm install\` to install dependencies.
+`
+  writeFileSync(join(TEST_REPO_PATH, 'docs/examples.md'), markdownWithCode)
+  execSync('git add docs/examples.md', { cwd: TEST_REPO_PATH, stdio: 'ignore' })
+  execSync('git commit -m "Add code examples documentation"', { cwd: TEST_REPO_PATH, stdio: 'ignore' })
+
   console.log('Test git repo created with sample commits')
 }
