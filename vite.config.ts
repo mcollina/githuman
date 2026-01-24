@@ -9,6 +9,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/web',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000, // Shiki core is large, suppress warning
   },
   server: {
     proxy: {
