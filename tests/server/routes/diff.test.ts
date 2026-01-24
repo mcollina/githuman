@@ -7,6 +7,7 @@ import { execSync } from 'node:child_process'
 import { buildApp } from '../../../src/server/app.ts'
 import { createConfig } from '../../../src/server/config.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 describe('diff routes', () => {
   let app: FastifyInstance
@@ -15,6 +16,7 @@ describe('diff routes', () => {
     // Use current directory (which is a git repo) for testing
     const config = createConfig({
       repositoryPath: process.cwd(),
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -28,6 +30,7 @@ describe('diff routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/info',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -46,6 +49,7 @@ describe('diff routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/info',
+        headers: authHeader(),
       })
 
       const body = JSON.parse(response.body)
@@ -59,6 +63,7 @@ describe('diff routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/diff/files',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -74,6 +79,7 @@ describe('diff routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/diff/staged',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -97,6 +103,7 @@ describe('diff routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/diff/staged',
+        headers: authHeader(),
       })
 
       const body = JSON.parse(response.body)
@@ -112,6 +119,7 @@ describe('diff routes', () => {
     before(async () => {
       const config = createConfig({
         repositoryPath: '/tmp', // Not a git repo
+        authToken: TEST_TOKEN,
       })
       nonGitApp = await buildApp(config, { logger: false })
     })
@@ -124,6 +132,7 @@ describe('diff routes', () => {
       const response = await nonGitApp.inject({
         method: 'GET',
         url: '/api/info',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 400)
@@ -135,6 +144,7 @@ describe('diff routes', () => {
       const response = await nonGitApp.inject({
         method: 'GET',
         url: '/api/diff/files',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 400)
@@ -146,6 +156,7 @@ describe('diff routes', () => {
       const response = await nonGitApp.inject({
         method: 'GET',
         url: '/api/diff/staged',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 400)
@@ -165,6 +176,7 @@ describe('diff routes', () => {
 
       const config = createConfig({
         repositoryPath: tempDir,
+        authToken: TEST_TOKEN,
       })
       noCommitsApp = await buildApp(config, { logger: false })
     })
@@ -178,6 +190,7 @@ describe('diff routes', () => {
       const response = await noCommitsApp.inject({
         method: 'GET',
         url: '/api/info',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -189,6 +202,7 @@ describe('diff routes', () => {
       const response = await noCommitsApp.inject({
         method: 'GET',
         url: '/api/diff/staged',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 400)

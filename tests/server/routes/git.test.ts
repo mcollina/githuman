@@ -7,6 +7,7 @@ import { execSync } from 'node:child_process'
 import { buildApp } from '../../../src/server/app.ts'
 import { createConfig } from '../../../src/server/config.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 describe('git routes', () => {
   let app: FastifyInstance
@@ -26,6 +27,7 @@ describe('git routes', () => {
 
     const config = createConfig({
       repositoryPath: tempDir,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -40,6 +42,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/info',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -56,6 +59,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/staged',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -70,6 +74,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/unstaged',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -85,6 +90,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/branches',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -100,6 +106,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/commits',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -114,6 +121,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/commits?limit=5&offset=0',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -126,6 +134,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/commits?search=test',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -141,6 +150,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/tree/HEAD',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -157,6 +167,7 @@ describe('git routes', () => {
       const commitsResponse = await app.inject({
         method: 'GET',
         url: '/api/git/commits?limit=1',
+        headers: authHeader(),
       })
       const { commits } = JSON.parse(commitsResponse.body)
       const sha = commits[0].sha
@@ -164,6 +175,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/git/tree/${sha}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -177,6 +189,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/tree/invalid-ref-xyz-123',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 400)
@@ -192,6 +205,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/tree/HEAD?includeWorkingDir=true',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -212,6 +226,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/tree/HEAD?includeWorkingDir=true',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -231,6 +246,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/tree/HEAD',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -248,6 +264,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/file/README.md?ref=HEAD',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -266,6 +283,7 @@ describe('git routes', () => {
       const commitsResponse = await app.inject({
         method: 'GET',
         url: '/api/git/commits?limit=1',
+        headers: authHeader(),
       })
       const { commits } = JSON.parse(commitsResponse.body)
       const sha = commits[0].sha
@@ -273,6 +291,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/git/file/README.md?ref=${sha}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -287,6 +306,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/file/does-not-exist.txt?ref=HEAD',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -299,6 +319,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/file/README.md?ref=invalid-ref-xyz',
+        headers: authHeader(),
       })
 
       // Invalid ref causes git show to fail, resulting in 404 (file not found at ref)
@@ -312,6 +333,7 @@ describe('git routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/file/README.md?ref=HEAD',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -341,6 +363,7 @@ describe('git staging routes', () => {
 
     const config = createConfig({
       repositoryPath: tempDir,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -359,6 +382,7 @@ describe('git staging routes', () => {
       const beforeResponse = await app.inject({
         method: 'GET',
         url: '/api/git/unstaged',
+        headers: authHeader(),
       })
       const beforeBody = JSON.parse(beforeResponse.body)
       assert.strictEqual(beforeBody.hasUnstagedChanges, true)
@@ -367,6 +391,7 @@ describe('git staging routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/git/stage',
+        headers: authHeader(),
         payload: { files: ['new-file.txt'] },
       })
 
@@ -380,6 +405,7 @@ describe('git staging routes', () => {
       const afterResponse = await app.inject({
         method: 'GET',
         url: '/api/git/staged',
+        headers: authHeader(),
       })
       const afterBody = JSON.parse(afterResponse.body)
       assert.strictEqual(afterBody.hasStagedChanges, true)
@@ -389,6 +415,7 @@ describe('git staging routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/git/stage',
+        headers: authHeader(),
         payload: { files: [] },
       })
 
@@ -409,6 +436,7 @@ describe('git staging routes', () => {
       const beforeResponse = await app.inject({
         method: 'GET',
         url: '/api/git/staged',
+        headers: authHeader(),
       })
       const beforeBody = JSON.parse(beforeResponse.body)
       assert.strictEqual(beforeBody.hasStagedChanges, true)
@@ -417,6 +445,7 @@ describe('git staging routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/git/unstage',
+        headers: authHeader(),
         payload: { files: ['another-file.txt'] },
       })
 
@@ -431,6 +460,7 @@ describe('git staging routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/git/unstage',
+        headers: authHeader(),
         payload: { files: [] },
       })
 
@@ -454,6 +484,7 @@ describe('git staging routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/git/stage-all',
+        headers: authHeader(),
         payload: {},
       })
 
@@ -467,6 +498,7 @@ describe('git staging routes', () => {
       const afterResponse = await app.inject({
         method: 'GET',
         url: '/api/git/staged',
+        headers: authHeader(),
       })
       const afterBody = JSON.parse(afterResponse.body)
       assert.strictEqual(afterBody.hasStagedChanges, true)
@@ -490,6 +522,7 @@ describe('GET /api/diff/unstaged', () => {
 
     const config = createConfig({
       repositoryPath: tempDir,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -503,6 +536,7 @@ describe('GET /api/diff/unstaged', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/diff/unstaged',
+      headers: authHeader(),
     })
 
     assert.strictEqual(response.statusCode, 200)
@@ -519,6 +553,7 @@ describe('GET /api/diff/unstaged', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/diff/unstaged',
+      headers: authHeader(),
     })
 
     assert.strictEqual(response.statusCode, 200)

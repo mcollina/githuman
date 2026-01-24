@@ -119,6 +119,11 @@ export interface ApiError {
   statusCode: number;
 }
 
+export interface TooManyRequestsResponse extends ApiError {
+  statusCode: 429;
+  retryAfter: number; // seconds until retry allowed
+}
+
 export interface HealthResponse {
   status: 'ok';
   authRequired: boolean;

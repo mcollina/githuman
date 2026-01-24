@@ -4,12 +4,13 @@ import { buildApp } from '../../../src/server/app.ts'
 import { createConfig } from '../../../src/server/config.ts'
 import { initDatabase, closeDatabase } from '../../../src/server/db/index.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 describe('events routes', () => {
   let app: FastifyInstance
 
   beforeEach(async () => {
-    const config = createConfig({ dbPath: ':memory:' })
+    const config = createConfig({ dbPath: ':memory:', authToken: TEST_TOKEN })
     initDatabase(config.dbPath)
     app = await buildApp(config, { logger: false, serveStatic: false })
   })
@@ -24,6 +25,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/events/clients',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -38,6 +40,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: { type: 'todos', action: 'updated' },
       })
 
@@ -50,6 +53,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: { type: 'reviews', action: 'created' },
       })
 
@@ -62,6 +66,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: { type: 'comments', action: 'deleted' },
       })
 
@@ -74,6 +79,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: { type: 'todos' },
       })
 
@@ -86,6 +92,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: { type: 'invalid' },
       })
 
@@ -96,6 +103,7 @@ describe('events routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/events/notify',
+        headers: authHeader(),
         payload: {},
       })
 
@@ -112,7 +120,7 @@ describe('events routes', () => {
       // This test verifies that the SIGINT fix works - the server should close
       // quickly without waiting for timeout. We use a separate app instance
       // to avoid interfering with the afterEach hook.
-      const config = createConfig({ dbPath: ':memory:' })
+      const config = createConfig({ dbPath: ':memory:', authToken: TEST_TOKEN })
       const testApp = await buildApp(config, { logger: false, serveStatic: false })
 
       // Start time tracking

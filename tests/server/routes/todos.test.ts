@@ -6,13 +6,14 @@ import { initDatabase, closeDatabase, getDatabase } from '../../../src/server/db
 import { ReviewRepository } from '../../../src/server/repositories/review.repo.ts'
 import { TodoRepository } from '../../../src/server/repositories/todo.repo.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 describe('todo routes', () => {
   let app: FastifyInstance
   let testReviewId: string
 
   beforeEach(async () => {
-    const config = createConfig({ repositoryPath: process.cwd() })
+    const config = createConfig({ repositoryPath: process.cwd(), authToken: TEST_TOKEN })
     initDatabase(':memory:')
     app = await buildApp(config, { logger: false, serveStatic: false })
 
@@ -41,6 +42,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -59,6 +61,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -76,6 +79,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos?completed=true',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -94,6 +98,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/todos?reviewId=${testReviewId}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -114,6 +119,7 @@ describe('todo routes', () => {
       const response1 = await app.inject({
         method: 'GET',
         url: '/api/todos?limit=10&offset=0',
+        headers: authHeader(),
       })
       const result1 = JSON.parse(response1.payload)
       assert.strictEqual(result1.data.length, 10)
@@ -125,6 +131,7 @@ describe('todo routes', () => {
       const response2 = await app.inject({
         method: 'GET',
         url: '/api/todos?limit=10&offset=10',
+        headers: authHeader(),
       })
       const result2 = JSON.parse(response2.payload)
       assert.strictEqual(result2.data.length, 10)
@@ -135,6 +142,7 @@ describe('todo routes', () => {
       const response3 = await app.inject({
         method: 'GET',
         url: '/api/todos?limit=10&offset=20',
+        headers: authHeader(),
       })
       const result3 = JSON.parse(response3.payload)
       assert.strictEqual(result3.data.length, 5)
@@ -153,6 +161,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos/stats',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -168,6 +177,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: 'New todo' },
       })
 
@@ -183,6 +193,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: 'Review todo', reviewId: testReviewId },
       })
 
@@ -201,6 +212,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos/todo-1',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -213,6 +225,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/todos/non-existent',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -228,6 +241,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/todos/todo-1',
+        headers: authHeader(),
         payload: { content: 'Updated' },
       })
 
@@ -244,6 +258,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/todos/todo-1',
+        headers: authHeader(),
         payload: { completed: true },
       })
 
@@ -256,6 +271,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/todos/non-existent',
+        headers: authHeader(),
         payload: { content: 'Updated' },
       })
 
@@ -272,6 +288,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/todos/todo-1',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -286,6 +303,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/todos/non-existent',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -301,6 +319,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/todo-1/toggle',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -316,6 +335,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/todo-1/toggle',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -327,6 +347,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/non-existent/toggle',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -344,6 +365,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/todos/completed',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -366,6 +388,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/reorder',
+        headers: authHeader(),
         payload: { orderedIds: ['todo-3', 'todo-1', 'todo-2'] },
       })
 
@@ -392,6 +415,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/todo-3/move',
+        headers: authHeader(),
         payload: { position: 0 },
       })
 
@@ -410,6 +434,7 @@ describe('todo routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/non-existent/move',
+        headers: authHeader(),
         payload: { position: 0 },
       })
 

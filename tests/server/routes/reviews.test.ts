@@ -8,6 +8,7 @@ import { buildApp } from '../../../src/server/app.ts'
 import { createConfig } from '../../../src/server/config.ts'
 import { initDatabase, closeDatabase } from '../../../src/server/db/index.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 /**
  * Create a temporary git repository with no staged changes
@@ -55,6 +56,7 @@ describe('review routes', () => {
     const config = createConfig({
       repositoryPath: testRepoDir,
       dbPath,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -77,6 +79,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -92,6 +95,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews?page=2&pageSize=10',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -107,6 +111,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: {
           sourceType: 'staged',
         },
@@ -123,6 +128,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: {},
       })
 
@@ -138,6 +144,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews/non-existent-id',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -152,6 +159,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/reviews/non-existent-id',
+        headers: authHeader(),
         payload: {
           status: 'approved',
         },
@@ -169,6 +177,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/reviews/non-existent-id',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -184,7 +193,8 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/reviews/some-id',
-        // Explicitly no headers or payload
+        headers: authHeader(),
+        // Explicitly no payload
       })
 
       // Should return 404 (not found), not 400 (bad request)
@@ -197,6 +207,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews/stats',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -213,6 +224,7 @@ describe('review routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews/stats',
+        headers: authHeader(),
       })
 
       const body = JSON.parse(response.body)
@@ -249,6 +261,7 @@ describe('review routes with staged changes', () => {
     const config = createConfig({
       repositoryPath: testRepoDir,
       dbPath,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -270,6 +283,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: { sourceType: 'staged' },
       })
 
@@ -292,6 +306,7 @@ describe('review routes with staged changes', () => {
       const createResponse = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: { sourceType: 'staged' },
       })
       const created = JSON.parse(createResponse.body)
@@ -301,6 +316,7 @@ describe('review routes with staged changes', () => {
       const getResponse = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(getResponse.statusCode, 200)
@@ -314,6 +330,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/reviews/${reviewId}`,
+        headers: authHeader(),
         payload: { status: 'approved' },
       })
 
@@ -326,6 +343,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/reviews/${reviewId}`,
+        headers: authHeader(),
         payload: { status: 'changes_requested' },
       })
 
@@ -338,6 +356,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}/export`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -350,6 +369,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/reviews/${reviewId}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -360,6 +380,7 @@ describe('review routes with staged changes', () => {
       const getResponse = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}`,
+        headers: authHeader(),
       })
       assert.strictEqual(getResponse.statusCode, 404)
     })
@@ -373,6 +394,7 @@ describe('review routes with staged changes', () => {
       const createResponse = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: { sourceType: 'staged' },
       })
       const created = JSON.parse(createResponse.body)
@@ -385,6 +407,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}/files/hunks?path=${encodeURIComponent(filePath)}`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -402,6 +425,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews/non-existent-id/files/hunks?path=test.ts',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -411,6 +435,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}/files/hunks?path=non-existent-file.ts`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -422,6 +447,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${reviewId}/files/hunks?path=${encodeURIComponent('src/components/Test.tsx')}`,
+        headers: authHeader(),
       })
 
       // Should not error - just return empty hunks for non-existent path
@@ -437,12 +463,14 @@ describe('review routes with staged changes', () => {
       await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: { sourceType: 'staged' },
       })
 
       const createResponse2 = await app.inject({
         method: 'POST',
         url: '/api/reviews',
+        headers: authHeader(),
         payload: { sourceType: 'staged' },
       })
       const review2 = JSON.parse(createResponse2.body)
@@ -451,6 +479,7 @@ describe('review routes with staged changes', () => {
       await app.inject({
         method: 'PATCH',
         url: `/api/reviews/${review2.id}`,
+        headers: authHeader(),
         payload: { status: 'approved' },
       })
 
@@ -458,6 +487,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews?status=approved',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -471,6 +501,7 @@ describe('review routes with staged changes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews?page=1&pageSize=5',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -497,6 +528,7 @@ describe('review routes with non-git directory', () => {
     const config = createConfig({
       repositoryPath: '/tmp', // Not a git repo
       dbPath,
+      authToken: TEST_TOKEN,
     })
     app = await buildApp(config, { logger: false })
   })
@@ -514,6 +546,7 @@ describe('review routes with non-git directory', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/reviews',
+      headers: authHeader(),
       payload: {
         sourceType: 'staged',
       },

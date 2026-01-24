@@ -127,6 +127,17 @@ const db = createTestDatabase();
 const repo = new SomeRepository(db);
 ```
 
+**Important:** Always close Fastify apps in an `after()` hook, never inline:
+```typescript
+// Correct
+after(async () => {
+  await app.close()
+})
+
+// Wrong - don't close inline in tests
+await app.close() // NO!
+```
+
 Web tests use Vitest with Testing Library.
 
 ## Documentation

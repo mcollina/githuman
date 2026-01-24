@@ -6,13 +6,14 @@ import { initDatabase, closeDatabase } from '../../../src/server/db/index.ts'
 import { ReviewRepository } from '../../../src/server/repositories/review.repo.ts'
 import { CommentRepository } from '../../../src/server/repositories/comment.repo.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from '../helpers.ts'
 
 describe('comment routes', () => {
   let app: FastifyInstance
   let testReviewId: string
 
   beforeEach(async () => {
-    const config = createConfig({ repositoryPath: process.cwd() })
+    const config = createConfig({ repositoryPath: process.cwd(), authToken: TEST_TOKEN })
     initDatabase(':memory:')
     app = await buildApp(config, { logger: false, serveStatic: false })
 
@@ -41,6 +42,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${testReviewId}/comments`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -67,6 +69,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${testReviewId}/comments`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -102,6 +105,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${testReviewId}/comments?filePath=src/a.ts`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -116,6 +120,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/reviews/${testReviewId}/comments`,
+        headers: authHeader(),
         payload: {
           filePath: 'src/index.ts',
           lineNumber: 10,
@@ -136,6 +141,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/reviews/${testReviewId}/comments`,
+        headers: authHeader(),
         payload: {
           filePath: 'src/index.ts',
           lineNumber: 10,
@@ -154,6 +160,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/reviews/non-existent/comments',
+        headers: authHeader(),
         payload: {
           filePath: 'src/index.ts',
           content: 'Test',
@@ -202,6 +209,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/reviews/${testReviewId}/comments/stats`,
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -231,6 +239,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/comments/comment-1',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -243,6 +252,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/comments/non-existent',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -267,6 +277,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/comments/comment-1',
+        headers: authHeader(),
         payload: { content: 'Updated content' },
       })
 
@@ -279,6 +290,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/api/comments/non-existent',
+        headers: authHeader(),
         payload: { content: 'Updated' },
       })
 
@@ -304,6 +316,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/comments/comment-1',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -315,6 +328,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/comments/non-existent',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -339,6 +353,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/comments/comment-1/resolve',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)
@@ -350,6 +365,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/comments/non-existent/resolve',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 404)
@@ -374,6 +390,7 @@ describe('comment routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/comments/comment-1/unresolve',
+        headers: authHeader(),
       })
 
       assert.strictEqual(response.statusCode, 200)

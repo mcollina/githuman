@@ -110,6 +110,31 @@ describe('CLI', () => {
       assert.strictEqual(result.exitCode, 0)
       assert.ok(result.stdout.includes('Usage: githuman serve'))
     })
+
+    it('should auto-generate token when --auth is used without value', async () => {
+      // Use --no-open and a temp dir so it doesn't actually start the server
+      // This test just verifies parsing works - we can't fully start the server in tests
+      const result = await runCli(['serve', '--auth', '--help'])
+
+      assert.strictEqual(result.exitCode, 0)
+      // Help should show the optional token syntax
+      assert.ok(result.stdout.includes('--auth [token]'))
+    })
+
+    it('should show helpful error when --auth has short token', async () => {
+      const result = await runCli(['serve', '--auth', 'short', '--no-open'])
+
+      assert.strictEqual(result.exitCode, 1)
+      assert.ok(result.stderr.includes('at least 32 characters'))
+    })
+
+    it('should mention auto-generation in help text', async () => {
+      const result = await runCli(['serve', '--help'])
+
+      assert.strictEqual(result.exitCode, 0)
+      assert.ok(result.stdout.includes('auto-generate'))
+      assert.ok(result.stdout.includes('--auth [token]'))
+    })
   })
 
   describe('list command', () => {

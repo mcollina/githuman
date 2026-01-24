@@ -101,7 +101,7 @@ export async function buildApp (
           },
         },
       },
-      security: config.authToken ? [{ bearerAuth: [] }] : [],
+      security: config.authToken ? [{ bearerAuth: [] }] : []
     },
   })
 

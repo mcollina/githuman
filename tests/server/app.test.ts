@@ -3,16 +3,16 @@ import assert from 'node:assert'
 import { buildApp } from '../../src/server/app.ts'
 import { createConfig } from '../../src/server/config.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN } from './helpers.ts'
 
 describe('app', () => {
   describe('health endpoint', () => {
-    describe('without auth', () => {
+    // Auth is disabled by default for localhost (no token)
+    describe('without auth token (localhost default)', () => {
       let app: FastifyInstance
 
       before(async () => {
-        const config = createConfig({
-          authToken: null,
-        })
+        const config = createConfig()
         app = await buildApp(config, { logger: false })
       })
 
@@ -42,12 +42,12 @@ describe('app', () => {
       })
     })
 
-    describe('with auth', () => {
+    describe('with explicit token', () => {
       let app: FastifyInstance
 
       before(async () => {
         const config = createConfig({
-          authToken: 'secret',
+          authToken: TEST_TOKEN,
         })
         app = await buildApp(config, { logger: false })
       })

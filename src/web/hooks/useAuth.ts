@@ -10,6 +10,7 @@ interface AuthState {
   authRequired: boolean
   isAuthenticated: boolean
   error: string | null
+  retryAfter: number | null // seconds until retry allowed (429 response)
 }
 
 export function useAuth () {
@@ -18,10 +19,11 @@ export function useAuth () {
     authRequired: false,
     isAuthenticated: false,
     error: null,
+    retryAfter: null,
   })
 
   const checkAuth = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }))
+    setState((prev) => ({ ...prev, isLoading: true, error: null, retryAfter: null }))
 
     try {
       // Check health endpoint (no auth required for this)
@@ -36,6 +38,20 @@ export function useAuth () {
         const testResponse = await fetch('/api/git/info', {
           headers: { Authorization: `Bearer ${token}` },
         })
+
+        // Handle rate limiting
+        if (testResponse.status === 429) {
+          const retryAfter = parseInt(testResponse.headers.get('Retry-After') ?? '0', 10)
+          setState({
+            isLoading: false,
+            authRequired: true,
+            isAuthenticated: false,
+            error: `Too many failed attempts. Retry in ${retryAfter} seconds.`,
+            retryAfter,
+          })
+          return
+        }
+
         if (testResponse.status === 401) {
           // Token is invalid, clear it
           clearAuthToken()
@@ -44,6 +60,7 @@ export function useAuth () {
             authRequired: true,
             isAuthenticated: false,
             error: 'Invalid token',
+            retryAfter: null,
           })
           return
         }
@@ -54,6 +71,7 @@ export function useAuth () {
         authRequired: data.authRequired,
         isAuthenticated,
         error: null,
+        retryAfter: null,
       })
     } catch {
       setState({
@@ -61,6 +79,7 @@ export function useAuth () {
         authRequired: false,
         isAuthenticated: false,
         error: 'Failed to connect to server',
+        retryAfter: null,
       })
     }
   }, [])
@@ -70,7 +89,7 @@ export function useAuth () {
   }, [checkAuth])
 
   const login = useCallback(async (token: string) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }))
+    setState((prev) => ({ ...prev, isLoading: true, error: null, retryAfter: null }))
 
     try {
       // Verify the token works
@@ -78,11 +97,24 @@ export function useAuth () {
         headers: { Authorization: `Bearer ${token}` },
       })
 
+      // Handle rate limiting
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') ?? '0', 10)
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: `Too many failed attempts. Retry in ${retryAfter} seconds.`,
+          retryAfter,
+        }))
+        return false
+      }
+
       if (response.status === 401) {
         setState((prev) => ({
           ...prev,
           isLoading: false,
           error: 'Invalid token',
+          retryAfter: null,
         }))
         return false
       }
@@ -94,6 +126,7 @@ export function useAuth () {
         isLoading: false,
         isAuthenticated: true,
         error: null,
+        retryAfter: null,
       }))
       return true
     } catch {
@@ -101,6 +134,7 @@ export function useAuth () {
         ...prev,
         isLoading: false,
         error: 'Failed to verify token',
+        retryAfter: null,
       }))
       return false
     }

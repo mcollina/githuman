@@ -2,13 +2,23 @@
  * Server configuration
  */
 import { execSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
+
+const MIN_TOKEN_LENGTH = 32
 
 export interface ServerConfig {
   port: number;
   host: string;
-  authToken: string | null;
+  authToken: string | null; // null means no auth (localhost only)
   repositoryPath: string;
   dbPath: string;
+}
+
+/**
+ * Generate a secure random token (32 chars, 192 bits of entropy)
+ */
+export function generateToken (): string {
+  return randomBytes(24).toString('base64')
 }
 
 /**
@@ -42,10 +52,23 @@ export function createConfig (options: Partial<ServerConfig> = {}): ServerConfig
   const defaultDbPath = `${repositoryPath}/.githuman/reviews.db`
   const dbPath = options.dbPath ?? process.env.GITHUMAN_DB_PATH ?? defaultDbPath
 
+  // Priority for auth token:
+  // 1. Explicit option (validated for minimum length)
+  // 2. GITHUMAN_TOKEN environment variable (validated for minimum length)
+  // 3. null (no auth - safe for localhost)
+  const authToken = options.authToken ?? process.env.GITHUMAN_TOKEN ?? null
+
+  if (authToken && authToken.length < MIN_TOKEN_LENGTH) {
+    throw new Error(
+      `Auth token must be at least ${MIN_TOKEN_LENGTH} characters. ` +
+      'Generate with: openssl rand -base64 32'
+    )
+  }
+
   return {
     port: options.port ?? 3847,
     host: options.host ?? 'localhost',
-    authToken: options.authToken ?? process.env.GITHUMAN_TOKEN ?? null,
+    authToken,
     repositoryPath,
     dbPath,
   }

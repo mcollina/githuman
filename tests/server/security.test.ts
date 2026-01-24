@@ -8,12 +8,13 @@ import { buildApp } from '../../src/server/app.ts'
 import { createConfig } from '../../src/server/config.ts'
 import { initDatabase, closeDatabase } from '../../src/server/db/index.ts'
 import type { FastifyInstance } from 'fastify'
+import { TEST_TOKEN, authHeader } from './helpers.ts'
 
 describe('security tests', () => {
   let app: FastifyInstance
 
   beforeEach(async () => {
-    const config = createConfig({ repositoryPath: process.cwd() })
+    const config = createConfig({ repositoryPath: process.cwd(), authToken: TEST_TOKEN })
     initDatabase(':memory:')
     app = await buildApp(config, { logger: false, serveStatic: false })
   })
@@ -30,6 +31,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: maliciousContent },
       })
 
@@ -43,6 +45,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'GET',
         url: "/api/todos?completed=1'%20OR%20'1'='1",
+        headers: authHeader(),
       })
 
       // Should not cause server error
@@ -53,6 +56,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'GET',
         url: "/api/reviews/1'%20OR%20'1'='1",
+        headers: authHeader(),
       })
 
       // Should return 404, not 500
@@ -65,6 +69,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: '' },
       })
 
@@ -75,6 +80,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: null },
       })
 
@@ -86,6 +92,7 @@ describe('security tests', () => {
       const createResponse = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: 'test' },
       })
       const todo = JSON.parse(createResponse.payload)
@@ -93,6 +100,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/todos/${todo.id}/move`,
+        headers: authHeader(),
         payload: { position: -1 },
       })
 
@@ -103,6 +111,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/nonexistent-id/move',
+        headers: authHeader(),
         payload: { position: 999999999999 },
       })
 
@@ -118,6 +127,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: xssContent },
       })
 
@@ -133,7 +143,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
-        headers: { 'content-type': 'application/json' },
+        headers: { ...authHeader(), 'content-type': 'application/json' },
         payload: '{"content": "test", "__proto__": {"admin": true}}',
       })
 
@@ -145,7 +155,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
-        headers: { 'content-type': 'application/json' },
+        headers: { ...authHeader(), 'content-type': 'application/json' },
         payload: '{"content": "test", "constructor": {"prototype": {"admin": true}}}',
       })
 
@@ -161,6 +171,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos',
+        headers: authHeader(),
         payload: { content: largeContent },
       })
 
@@ -174,6 +185,7 @@ describe('security tests', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/todos/reorder',
+        headers: authHeader(),
         payload: { orderedIds: largeArray },
       })
 
@@ -187,7 +199,7 @@ describe('schema validation tests', () => {
   let app: FastifyInstance
 
   beforeEach(async () => {
-    const config = createConfig({ repositoryPath: process.cwd() })
+    const config = createConfig({ repositoryPath: process.cwd(), authToken: TEST_TOKEN })
     initDatabase(':memory:')
     app = await buildApp(config, { logger: false, serveStatic: false })
   })
@@ -202,6 +214,7 @@ describe('schema validation tests', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/reviews',
+        headers: authHeader(),
       })
 
       // Should not return 500 due to schema mismatch
@@ -212,6 +225,7 @@ describe('schema validation tests', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/commits?limit=5',
+        headers: authHeader(),
       })
 
       // Should not return 500 due to schema mismatch
@@ -222,6 +236,7 @@ describe('schema validation tests', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/git/branches',
+        headers: authHeader(),
       })
 
       // Should not return 500 due to schema mismatch
