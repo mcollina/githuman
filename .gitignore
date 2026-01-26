@@ -7,3 +7,6 @@ out/
 playwright-report/
 test-results/
 .eslintcache
+.claude
+.pi
+.agents
