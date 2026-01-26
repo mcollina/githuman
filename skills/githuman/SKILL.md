@@ -1,82 +1,24 @@
 ---
 name: githuman
-description: Review AI-generated code changes before committing using GitHuman. Use when: reviewing code changes, creating code reviews, checking what the AI agent wrote, preparing to commit, or when user mentions "review", "GitHuman", or "before commit".
+description: Review AI-generated code changes before committing using GitHuman. Use when reviewing code changes, creating code reviews, checking what the AI agent wrote, preparing to commit, or when user mentions "review", "GitHuman", or "before commit".
+metadata:
+  tags: code-review, git, ai-workflow, commit, staging
 allowed-tools: Bash(*), Read, Glob, Grep
 ---
 
-# GitHuman - Code Review Skill
+## When to use
 
-GitHuman helps you review AI-generated code changes before committing them.
+Use this skill whenever you are working with GitHuman to review AI-generated code changes before committing them. GitHuman provides a web interface for visual code review with inline comments, suggestions, and todo management.
 
-## Installation
+## How to use
 
-```bash
-# Run directly with npx (no install needed)
-npx githuman serve
+Read individual rule files for detailed explanations and examples:
 
-# Or install globally
-npm install -g githuman
-```
-
-## When to Use This Skill
-
-- After an AI agent has made code changes
-- Before committing changes
-- When you want to review what was modified
-- When preparing a commit with proper review
-
-## Workflow
-
-### 1. Start the Review Server
-
-```bash
-npx githuman serve
-```
-
-This opens a web interface at http://localhost:3847 for visual code review.
-
-### 2. CLI Commands
-
-**List reviews:**
-```bash
-npx githuman list
-```
-
-**Create a review:**
-Open the web UI - you can stage files directly in GitHuman or review already staged changes.
-
-**Resolve a review (mark as approved and resolve all comments):**
-```bash
-npx githuman resolve <review-id|last>
-```
-
-**Export a review to markdown:**
-```bash
-npx githuman export <review-id|last> -o review.md
-```
-
-**Manage todos:**
-```bash
-npx githuman todo list              # List pending todos
-npx githuman todo add "Task"        # Add a new todo
-npx githuman todo done <id>         # Mark as done
-```
-
-### 3. Typical Review Flow
-
-1. AI agent makes changes
-2. Run `npx githuman serve` to start the review interface
-3. View unstaged changes and stage them directly in the UI (or use `git add`)
-4. Review the diff in the web UI
-5. Add comments or suggestions on specific lines
-6. Create todos for follow-up work
-7. Approve or request changes
-8. When satisfied, commit the changes
-
-## Tips
-
-- Use `npx githuman resolve last` to quickly approve the most recent review
-- Export reviews with `npx githuman export last` to keep documentation
-- Check `npx githuman todo list` for pending tasks before committing
-- Stage files directly in GitHuman - no need to switch to the terminal
-- If you use GitHuman frequently, install globally: `npm install -g githuman`
+- [installation.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/installation.md) - Installing and running GitHuman
+- [review-workflow.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/review-workflow.md) - Complete workflow for reviewing AI-generated changes
+- [staging.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/staging.md) - Staging files for review directly in GitHuman
+- [cli-commands.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/cli-commands.md) - All CLI commands with examples
+- [todos.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/todos.md) - Managing todos and follow-up tasks
+- [comments.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/comments.md) - Adding inline comments and suggestions to code
+- [export.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/export.md) - Exporting reviews for documentation
+- [tips.md](https://github.com/mcollina/githuman-skills/blob/main/skills/githuman/rules/tips.md) - Best practices and productivity tips
