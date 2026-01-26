@@ -42,7 +42,6 @@ Commands:
   export         Export a review to markdown
   resolve        Mark a review as approved and resolve all comments
   todo           Manage todo items for tracking tasks
-  install-skill  Install the GitHuman Claude Code skill
 
 Options:
   -h, --help      Show this help message
@@ -90,11 +89,6 @@ switch (command) {
   case 'todo': {
     const { todoCommand } = await import('./commands/todo.ts')
     await todoCommand(process.argv.slice(3))
-    break
-  }
-  case 'install-skill': {
-    const { installSkillCommand } = await import('./commands/install-skill.ts')
-    await installSkillCommand(process.argv.slice(3))
     break
   }
   default:

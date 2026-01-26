@@ -66,6 +66,16 @@ githuman serve
 
 This opens a web interface at `http://localhost:3847` where you can review your staged changes before committing.
 
+## Agent Skills
+
+GitHuman provides an agent skill that teaches AI coding agents when and how to use GitHuman for reviewing changes.
+
+Install it with the [skills](https://skills.sh/) CLI:
+
+```bash
+npx skills add mcollina/githuman-skills
+```
+
 ## CLI Reference
 
 ### Start Review Server
