@@ -136,8 +136,14 @@ export class ExportService {
     lines.push('| Field | Value |')
     lines.push('|-------|-------|')
     lines.push(`| Repository | ${repository.name} |`)
-    lines.push(`| Branch | ${repository.branch} |`)
-    lines.push(`| Source | ${sourceLabel} |`)
+    // For branch reviews, show both branches explicitly
+    if (review.sourceType === 'branch' && review.sourceRef) {
+      lines.push(`| Source Branch | ${review.sourceRef} |`)
+      lines.push(`| Target Branch | ${repository.branch} |`)
+    } else {
+      lines.push(`| Branch | ${repository.branch} |`)
+      lines.push(`| Source | ${sourceLabel} |`)
+    }
     lines.push(`| Status | ${formatStatus(review.status)} |`)
     lines.push(`| Created | ${formatDate(review.createdAt)} |`)
     if (review.baseRef) {

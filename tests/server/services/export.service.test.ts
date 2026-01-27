@@ -240,5 +240,55 @@ describe('ExportService', () => {
       assert.ok(markdown.includes('`src/index.ts`'))
       assert.ok(markdown.includes('+5/-2'))
     })
+
+    it('should show Source Branch and Target Branch for branch reviews', () => {
+      // Create a branch review
+      const branchSnapshotData = JSON.stringify({
+        files: [
+          {
+            oldPath: 'src/feature.ts',
+            newPath: 'src/feature.ts',
+            status: 'added',
+            additions: 10,
+            deletions: 0,
+            hunks: [],
+          },
+        ],
+        repository: {
+          name: 'test-repo',
+          branch: 'main',
+          remote: 'https://github.com/test/repo',
+          path: '/path/to/repo',
+        },
+      })
+
+      const branchReview = reviewRepo.create({
+        id: 'branch-review-1',
+        repositoryPath: '/path/to/repo',
+        baseRef: 'def456abc789',
+        sourceType: 'branch',
+        sourceRef: 'feature/api',
+        snapshotData: branchSnapshotData,
+        status: 'in_progress',
+      })
+
+      const markdown = exportService.exportToMarkdown(branchReview.id)
+
+      assert.ok(markdown)
+      assert.ok(markdown.includes('| Source Branch | feature/api |'), 'Should show Source Branch')
+      assert.ok(markdown.includes('| Target Branch | main |'), 'Should show Target Branch')
+      assert.ok(!markdown.includes('| Branch | main |'), 'Should NOT show generic Branch field')
+      assert.ok(!markdown.includes('| Source | Branch: feature/api |'), 'Should NOT show Source with Branch: prefix')
+    })
+
+    it('should show Branch and Source for staged reviews', () => {
+      const markdown = exportService.exportToMarkdown(testReviewId)
+
+      assert.ok(markdown)
+      assert.ok(markdown.includes('| Branch | main |'), 'Should show Branch for staged reviews')
+      assert.ok(markdown.includes('| Source | Staged changes |'), 'Should show Source for staged reviews')
+      assert.ok(!markdown.includes('Source Branch'), 'Should NOT show Source Branch for staged reviews')
+      assert.ok(!markdown.includes('Target Branch'), 'Should NOT show Target Branch for staged reviews')
+    })
   })
 })
