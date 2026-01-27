@@ -3,7 +3,7 @@
  * GitHuman CLI - Review AI agent code changes before commit
  */
 
-import { version } from '../../package.json';
+import { version } from '../../package.json'
 
 // Suppress SQLite experimental warning
 // Must be done before any imports that might load sqlite
@@ -54,7 +54,7 @@ Run 'githuman <command> --help' for command-specific help.
 }
 
 function printVersion () {
-  console.log(`githuman v${version}`);
+  console.log(`githuman v${version}`)
 }
 
 if (values.version && !command) {
