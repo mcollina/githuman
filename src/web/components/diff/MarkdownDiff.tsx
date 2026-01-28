@@ -13,12 +13,13 @@ export { isMarkdownFile }
 interface MarkdownDiffProps {
   file: DiffFile;
   allowComments?: boolean;
+  onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
   version?: 'staged' | 'working';
 }
 
 type ViewMode = 'diff' | 'preview' | 'split'
 
-export function MarkdownDiff ({ file, allowComments = false, version = 'staged' }: MarkdownDiffProps) {
+export function MarkdownDiff ({ file, allowComments = false, onLineClick, version = 'staged' }: MarkdownDiffProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('diff')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,7 +101,7 @@ export function MarkdownDiff ({ file, allowComments = false, version = 'staged' 
       {/* Content area */}
       {viewMode === 'diff'
         ? (
-          <DiffContent hunks={file.hunks} filePath={filePath} allowComments={allowComments} />
+          <DiffContent hunks={file.hunks} filePath={filePath} allowComments={allowComments} onLineClick={onLineClick} />
           )
         : viewMode === 'preview'
           ? (
@@ -117,7 +118,7 @@ export function MarkdownDiff ({ file, allowComments = false, version = 'staged' 
                 <div className='p-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)] font-medium'>
                   Diff
                 </div>
-                <DiffContent hunks={file.hunks} filePath={filePath} allowComments={allowComments} />
+                <DiffContent hunks={file.hunks} filePath={filePath} allowComments={allowComments} onLineClick={onLineClick} />
               </div>
               <div className='flex-1 min-w-0'>
                 <div className='p-2 bg-[var(--gh-bg-secondary)] border-b border-[var(--gh-border)] text-xs text-[var(--gh-text-muted)] font-medium'>
@@ -140,9 +141,10 @@ interface DiffContentProps {
   hunks: DiffHunkType[];
   filePath: string;
   allowComments?: boolean;
+  onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
 }
 
-function DiffContent ({ hunks, filePath, allowComments }: DiffContentProps) {
+function DiffContent ({ hunks, filePath, allowComments, onLineClick }: DiffContentProps) {
   if (hunks.length === 0) {
     return (
       <div className='p-4 text-center text-[var(--gh-text-muted)] text-sm'>
@@ -159,6 +161,7 @@ function DiffContent ({ hunks, filePath, allowComments }: DiffContentProps) {
           hunk={hunk}
           filePath={filePath}
           allowComments={allowComments}
+          onLineClick={onLineClick}
         />
       ))}
     </div>

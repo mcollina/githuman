@@ -184,7 +184,7 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
                   )
                 : isMarkdown
                   ? (
-                    <MarkdownDiff file={fileWithHunks} allowComments={allowComments} version={version} />
+                    <MarkdownDiff file={fileWithHunks} allowComments={allowComments} onLineClick={onLineClick} version={version} />
                     )
                   : !hunks || hunks.length === 0
                       ? (
