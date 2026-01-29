@@ -123,7 +123,7 @@ export const CTAScene = () => {
               fontWeight: 500,
             }}
           >
-            npx githuman serve
+            npx githuman@latest serve
           </span>
         </div>
 
