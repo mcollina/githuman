@@ -56,7 +56,7 @@ It's now a tool I use every day.
 ## Get Started
 
 ```bash
-cd /your/repo && npx githuman serve
+cd /your/repo && npx githuman@latest serve
 ```
 
 Stage some changes, open the browser, and see your diff the way it deserves to be seen.

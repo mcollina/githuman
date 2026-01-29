@@ -113,7 +113,7 @@ export const SolutionScene = () => {
               fontWeight: 500,
             }}
           >
-            npx githuman serve
+            npx githuman@latest serve
           </span>
         </div>
       </div>

@@ -51,7 +51,7 @@ npm install -g githuman
 Or run directly:
 
 ```bash
-npx githuman serve
+npx githuman@latest serve
 ```
 
 ## Quick Start
