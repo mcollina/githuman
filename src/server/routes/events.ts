@@ -6,27 +6,9 @@
 import { Type, type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import MQEmitter, { type Message, type MQEmitter as MQEmitterType } from 'mqemitter'
 import chokidar, { type FSWatcher } from 'chokidar'
-import ignore, { type Ignore } from 'ignore'
-import { readFileSync, existsSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { relative } from 'node:path'
 import { SuccessSchema } from '../schemas/common.ts'
-
-/**
- * Load .gitignore patterns from the repository
- */
-function loadGitignore (repoPath: string): Ignore {
-  const ig = ignore()
-  // Always ignore .git directory
-  ig.add('.git')
-
-  const gitignorePath = join(repoPath, '.gitignore')
-  if (existsSync(gitignorePath)) {
-    const content = readFileSync(gitignorePath, 'utf-8')
-    ig.add(content)
-  }
-
-  return ig
-}
+import { loadGitignore } from '../utils/gitignore.ts'
 
 // Event types that can be broadcast
 export type EventType = 'todos' | 'reviews' | 'comments' | 'files'
@@ -93,12 +75,12 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   }, 300)
 
   // Start watching when we have connected clients
-  const startWatching = () => {
+  const startWatching = async () => {
     if (fileWatcher) return
 
     try {
       // Load gitignore patterns for filtering
-      const ig = loadGitignore(repoPath)
+      const ig = await loadGitignore(repoPath, fastify.log)
 
       fileWatcher = chokidar.watch(repoPath, {
         ignored: (filePath: string) => {
@@ -140,7 +122,7 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   }
 
   // Start watching immediately (could optimize to start only when clients connect)
-  startWatching()
+  await startWatching()
 
   // Clean up on server close
   fastify.addHook('onClose', async () => {
