@@ -81,9 +81,9 @@ export async function buildApp (
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for Swagger UI and Vite
-        styleSrc: ["'self'", "'unsafe-inline'"], // Needed for inline styles
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], // Needed for inline styles and Google Fonts
         imgSrc: ["'self'", 'data:', 'blob:'], // Allow data URIs for images
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'], // Allow Google Fonts
         connectSrc: ["'self'"], // For API calls and SSE
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
