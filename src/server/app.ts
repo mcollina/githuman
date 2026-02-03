@@ -80,7 +80,7 @@ export async function buildApp (
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for Swagger UI and Vite
+        scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"], // Needed for Swagger UI, Vite, and Shiki syntax highlighter (WebAssembly)
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], // Needed for inline styles and Google Fonts
         imgSrc: ["'self'", 'data:', 'blob:'], // Allow data URIs for images
         fontSrc: ["'self'", 'https://fonts.gstatic.com'], // Allow Google Fonts
