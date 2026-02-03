@@ -89,6 +89,7 @@ export async function statusCommand (args: string[]) {
         if (status.reviews.changesRequested > 0) {
           console.log(`  [!] Changes requested: ${status.reviews.changesRequested}`)
         }
+        console.log('  Run "githuman list" for details')
       }
 
       console.log('')
@@ -101,6 +102,7 @@ export async function statusCommand (args: string[]) {
         console.log(`  Total: ${status.todos.total}`)
         console.log(`  [ ] Pending: ${status.todos.pending}`)
         console.log(`  [x] Completed: ${status.todos.completed}`)
+        console.log('  Run "githuman todo list" for details')
       }
     }
 
