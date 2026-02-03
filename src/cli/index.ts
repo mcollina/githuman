@@ -38,6 +38,7 @@ Usage: githuman <command> [options]
 
 Commands:
   serve          Start the review server and open web interface
+  status         Show overview of reviews and todos
   list           List all saved reviews for the current repository
   export         Export a review to markdown
   resolve        Mark a review as approved and resolve all comments
@@ -69,6 +70,11 @@ switch (command) {
   case 'serve': {
     const { serveCommand } = await import('./commands/serve.ts')
     await serveCommand(process.argv.slice(3))
+    break
+  }
+  case 'status': {
+    const { statusCommand } = await import('./commands/status.ts')
+    await statusCommand(process.argv.slice(3))
     break
   }
   case 'list': {
