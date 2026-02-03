@@ -43,6 +43,39 @@
   --gh-glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
 }
 
+/* Light theme overrides */
+:root.light {
+  --gh-bg-primary: #f8fafc;
+  --gh-bg-secondary: #ffffff;
+  --gh-bg-elevated: #f1f5f9;
+  --gh-bg-surface: #e2e8f0;
+
+  --gh-accent-primary: #0891b2;
+  --gh-accent-secondary: #7c3aed;
+  --gh-accent-tertiary: #db2777;
+
+  --gh-success: #16a34a;
+  --gh-warning: #d97706;
+  --gh-error: #dc2626;
+
+  --gh-text-primary: #0f172a;
+  --gh-text-secondary: #475569;
+  --gh-text-muted: #94a3b8;
+
+  --gh-border: #cbd5e1;
+  --gh-border-subtle: #e2e8f0;
+
+  --diff-added-bg: rgba(22, 163, 74, 0.12);
+  --diff-added-border: #16a34a;
+  --diff-removed-bg: rgba(220, 38, 38, 0.12);
+  --diff-removed-border: #dc2626;
+  --diff-hunk-bg: #f1f5f9;
+  --diff-line-number: #64748b;
+
+  --gh-glow-cyan: 0 0 15px rgba(8, 145, 178, 0.25);
+  --gh-glow-purple: 0 0 15px rgba(124, 58, 237, 0.25);
+}
+
 /* Base styles */
 html {
   font-family: 'Syne', system-ui, sans-serif;

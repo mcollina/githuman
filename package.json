@@ -16,7 +16,7 @@
     "dev:server": "node --watch-path=src src/cli/index.ts serve --no-open",
     "clean": "rm -rf dist",
     "build": "npm run build:server && npm run build:web",
-    "build:server": "tsc -p tsconfig.build.json && chmod +x dist/cli/index.js",
+    "build:server": "tsc -p tsconfig.build.json && node -e \"if (process.platform !== 'win32') { try { require('child_process').execSync('chmod +x dist/cli/index.js') } catch (e) { console.error('Failed to chmod:', e.message) } }\"",
     "build:web": "vite build",
     "start": "node dist/cli/index.js serve",
     "test": "npm run test:server && npm run test:cli && npm run test:web",
