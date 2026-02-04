@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { Header } from '../../../src/web/components/layout/Header'
 import { ThemeProvider } from '../../../src/web/contexts/ThemeContext'
 
-function renderWithRouter(component: React.ReactNode) {
+function renderWithRouter (component: React.ReactNode) {
   return render(
     <BrowserRouter>
       <ThemeProvider>{component}</ThemeProvider>

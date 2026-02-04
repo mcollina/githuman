@@ -9,7 +9,7 @@ interface VersionInfo {
   hasUpdate: boolean;
 }
 
-export function VersionBanner() {
+export function VersionBanner () {
   const [versionInfo, setVersionInfo] = useState<VersionInfo>({ latest: null, hasUpdate: false })
   const [dismissed, setDismissed] = useState(() => {
     return sessionStorage.getItem(DISMISSED_KEY) === 'true'

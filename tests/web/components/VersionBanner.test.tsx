@@ -8,124 +8,124 @@ global.fetch = mockFetch
 
 // Mock sessionStorage
 const mockSessionStorage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
-    length: 0,
-    key: vi.fn()
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn()
 }
 Object.defineProperty(window, 'sessionStorage', { value: mockSessionStorage })
 
 describe('VersionBanner', () => {
-    beforeEach(() => {
-        vi.clearAllMocks()
-        mockSessionStorage.getItem.mockReturnValue(null)
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSessionStorage.getItem.mockReturnValue(null)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('renders nothing when no update is available', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ version: '0.5.1' }) // Same as current
     })
 
-    afterEach(() => {
-        vi.restoreAllMocks()
+    const { container } = render(<VersionBanner />)
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith('https://registry.npmjs.org/githuman/latest')
     })
 
-    it('renders nothing when no update is available', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ version: '0.5.1' }) // Same as current
-        })
+    expect(container.firstChild).toBeNull()
+  })
 
-        const { container } = render(<VersionBanner />)
+  it('renders nothing when fetch fails', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
-        await waitFor(() => {
-            expect(mockFetch).toHaveBeenCalledWith('https://registry.npmjs.org/githuman/latest')
-        })
+    const { container } = render(<VersionBanner />)
 
-        expect(container.firstChild).toBeNull()
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
     })
 
-    it('renders nothing when fetch fails', async () => {
-        mockFetch.mockRejectedValueOnce(new Error('Network error'))
+    expect(container.firstChild).toBeNull()
+  })
 
-        const { container } = render(<VersionBanner />)
-
-        await waitFor(() => {
-            expect(mockFetch).toHaveBeenCalled()
-        })
-
-        expect(container.firstChild).toBeNull()
+  it('renders nothing when response is not ok', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false
     })
 
-    it('renders nothing when response is not ok', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: false
-        })
+    const { container } = render(<VersionBanner />)
 
-        const { container } = render(<VersionBanner />)
-
-        await waitFor(() => {
-            expect(mockFetch).toHaveBeenCalled()
-        })
-
-        expect(container.firstChild).toBeNull()
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
     })
 
-    it('renders banner when update is available', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ version: '1.0.0' }) // Newer than current
-        })
+    expect(container.firstChild).toBeNull()
+  })
 
-        render(<VersionBanner />)
-
-        await waitFor(() => {
-            expect(screen.getByText(/A new version of GitHuman is available/)).toBeDefined()
-        })
-
-        expect(screen.getByText('v1.0.0')).toBeDefined()
+  it('renders banner when update is available', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ version: '1.0.0' }) // Newer than current
     })
 
-    it('renders nothing when dismissed', async () => {
-        mockSessionStorage.getItem.mockReturnValue('true')
+    render(<VersionBanner />)
 
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ version: '1.0.0' })
-        })
-
-        const { container } = render(<VersionBanner />)
-
-        // Should not fetch when dismissed
-        expect(mockFetch).not.toHaveBeenCalled()
-        expect(container.firstChild).toBeNull()
+    await waitFor(() => {
+      expect(screen.getByText(/A new version of GitHuman is available/)).toBeDefined()
     })
 
-    it('dismisses banner when dismiss button is clicked', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ version: '1.0.0' })
-        })
+    expect(screen.getByText('v1.0.0')).toBeDefined()
+  })
 
-        render(<VersionBanner />)
+  it('renders nothing when dismissed', async () => {
+    mockSessionStorage.getItem.mockReturnValue('true')
 
-        await waitFor(() => {
-            expect(screen.getByText(/A new version of GitHuman is available/)).toBeDefined()
-        })
-
-        const dismissButton = screen.getByLabelText('Dismiss')
-        fireEvent.click(dismissButton)
-
-        expect(mockSessionStorage.setItem).toHaveBeenCalledWith('githuman-version-dismissed', 'true')
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ version: '1.0.0' })
     })
 
-    it('shows update command instruction', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ version: '1.0.0' })
-        })
+    const { container } = render(<VersionBanner />)
 
-        render(<VersionBanner />)
+    // Should not fetch when dismissed
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(container.firstChild).toBeNull()
+  })
 
-        await waitFor(() => {
-            expect(screen.getByText('npm update -g githuman')).toBeDefined()
-        })
+  it('dismisses banner when dismiss button is clicked', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ version: '1.0.0' })
     })
+
+    render(<VersionBanner />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/A new version of GitHuman is available/)).toBeDefined()
+    })
+
+    const dismissButton = screen.getByLabelText('Dismiss')
+    fireEvent.click(dismissButton)
+
+    expect(mockSessionStorage.setItem).toHaveBeenCalledWith('githuman-version-dismissed', 'true')
+  })
+
+  it('shows update command instruction', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ version: '1.0.0' })
+    })
+
+    render(<VersionBanner />)
+
+    await waitFor(() => {
+      expect(screen.getByText('npm update -g githuman')).toBeDefined()
+    })
+  })
 })
