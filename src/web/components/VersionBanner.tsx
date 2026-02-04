@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { lt } from 'semver'
+import { version as CURRENT_VERSION } from '../../../package.json'
 
-const CURRENT_VERSION = '0.5.1'
 const DISMISSED_KEY = 'githuman-version-dismissed'
 
 interface VersionInfo {
@@ -8,20 +9,7 @@ interface VersionInfo {
   hasUpdate: boolean;
 }
 
-function compareVersions (current: string, latest: string): boolean {
-  const curr = current.split('.').map(Number)
-  const lat = latest.split('.').map(Number)
-
-  for (let i = 0; i < Math.max(curr.length, lat.length); i++) {
-    const c = curr[i] || 0
-    const l = lat[i] || 0
-    if (l > c) return true
-    if (l < c) return false
-  }
-  return false
-}
-
-export function VersionBanner () {
+export function VersionBanner() {
   const [versionInfo, setVersionInfo] = useState<VersionInfo>({ latest: null, hasUpdate: false })
   const [dismissed, setDismissed] = useState(() => {
     return sessionStorage.getItem(DISMISSED_KEY) === 'true'
@@ -37,7 +25,7 @@ export function VersionBanner () {
 
         const data = await response.json()
         const latestVersion = data.version
-        const hasUpdate = compareVersions(CURRENT_VERSION, latestVersion)
+        const hasUpdate = lt(CURRENT_VERSION, latestVersion)
         setVersionInfo({ latest: latestVersion, hasUpdate })
       } catch {
         // Silently fail - version check is non-critical

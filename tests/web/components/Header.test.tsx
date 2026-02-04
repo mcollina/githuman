@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { Header } from '../../../src/web/components/layout/Header'
+import { ThemeProvider } from '../../../src/web/contexts/ThemeContext'
 
-function renderWithRouter (component: React.ReactNode) {
-  return render(<BrowserRouter>{component}</BrowserRouter>)
+function renderWithRouter(component: React.ReactNode) {
+  return render(
+    <BrowserRouter>
+      <ThemeProvider>{component}</ThemeProvider>
+    </BrowserRouter>
+  )
 }
 
 describe('Header', () => {
