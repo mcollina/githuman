@@ -1,6 +1,7 @@
 /**
  * Diff parsing service - parses unified diff format into structured data
  */
+import type { Ignore } from 'ignore'
 import type { DiffFile, DiffHunk, DiffSummary } from '../../shared/types.ts'
 
 /**
@@ -224,6 +225,18 @@ export function parseSingleFileDiff (diffText: string): DiffFile | null {
 
   // Return the first parsed file (there should only be one for a single-file diff)
   return parseFileDiff(fileDiffs[0])
+}
+
+/**
+ * Filter diff files using gitignore patterns
+ * Removes files that match the ignore patterns
+ */
+export function filterDiffFiles (files: DiffFile[], ig: Ignore): DiffFile[] {
+  return files.filter((file) => {
+    // Check both old and new paths - if either is ignored, filter out
+    const pathToCheck = file.newPath || file.oldPath
+    return !ig.ignores(pathToCheck)
+  })
 }
 
 export type { DiffSummary } from '../../shared/types.ts'
