@@ -1,8 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DiffFile } from '../../../src/web/components/diff/DiffFile'
 import { CommentProvider } from '../../../src/web/contexts/CommentContext'
 import type { DiffFile as DiffFileType } from '../../../src/shared/types'
+
+// Mock the HighlighterContext to avoid async shiki loading
+vi.mock('../../../src/web/contexts/HighlighterContext', () => ({
+  useHighlighterContext: () => ({
+    isReady: false,
+    getHighlightedLine: () => null,
+    highlightFile: async () => { },
+  }),
+  HighlighterProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
 
 function renderWithProvider (ui: React.ReactElement) {
   return render(
@@ -145,5 +155,35 @@ describe('DiffFile', () => {
     renderWithProvider(<DiffFile file={deletedFile} />)
 
     expect(screen.getByText('Deleted')).toBeDefined()
+  })
+
+  it('switches to split view when Split button is clicked', () => {
+    renderWithProvider(<DiffFile file={mockFile} defaultExpanded />)
+
+    // View mode toggle buttons should be visible for expanded files with hunks
+    const splitBtn = screen.getByText('Split')
+    const unifiedBtn = screen.getByText('Unified')
+
+    // Unified should be active by default
+    expect(unifiedBtn.className).toContain('bg-[var(--gh-accent-primary)]')
+
+    // Original/Modified headers should NOT be present in Unified view
+    expect(screen.queryByText('Original')).toBeNull()
+
+    // Click Split button
+    fireEvent.click(splitBtn)
+
+    // Split button should now be active
+    expect(splitBtn.className).toContain('bg-[var(--gh-accent-primary)]')
+
+    // Check for Split view specific headers
+    expect(screen.getByText('Original')).toBeDefined()
+    // 'Modified' appears twice: status badge + split view header
+    const modifiedElements = screen.getAllByText('Modified')
+    expect(modifiedElements.length).toBe(2)
+
+    // Verify diff content is visible in split view
+    expect(screen.getByText('old line')).toBeDefined()
+    expect(screen.getByText('new line')).toBeDefined()
   })
 })
