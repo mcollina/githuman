@@ -38,7 +38,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `node ${join(projectRoot, 'src/cli/index.ts')} serve --port ${port} --no-open`,
+    command: `node "${join(projectRoot, 'src/cli/index.ts')}" serve --port ${port} --no-open`,
     url: `http://localhost:${port}/api/health`,
     reuseExistingServer: false,
     timeout: 30000,

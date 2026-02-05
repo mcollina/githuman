@@ -26,6 +26,25 @@ export function useAuth () {
     setState((prev) => ({ ...prev, isLoading: true, error: null, retryAfter: null }))
 
     try {
+      // Check for token in URL
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlToken = urlParams.get('token')
+
+      if (urlToken) {
+        // Verify the URL token
+        const testResponse = await fetch('/api/git/info', {
+          headers: { Authorization: `Bearer ${urlToken}` },
+        })
+
+        if (testResponse.ok) {
+          setAuthToken(urlToken)
+          // valid token, clean up URL
+          const newUrl = new URL(window.location.href)
+          newUrl.searchParams.delete('token')
+          window.history.replaceState({}, '', newUrl.toString())
+        }
+      }
+
       // Check health endpoint (no auth required for this)
       const response = await fetch('/api/health')
       const data = (await response.json()) as HealthResponse

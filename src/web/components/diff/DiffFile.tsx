@@ -4,6 +4,7 @@ import { DiffHunk } from './DiffHunk'
 import { FullFileView } from './FullFileView'
 import { ImageDiff, isImageFile } from './ImageDiff'
 import { MarkdownDiff, isMarkdownFile } from './MarkdownDiff'
+import { SideBySideDiffView } from './SideBySideDiffView'
 import { reviewsApi } from '../../api/reviews'
 import type { DiffFile as DiffFileType, DiffFileMetadata, DiffHunk as DiffHunkType } from '../../../shared/types'
 
@@ -51,7 +52,7 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
 
   // If forceExpanded is true, ensure the file is expanded
   const isExpanded = forceExpanded || expanded
-  const [viewMode, setViewMode] = useState<'diff' | 'full'>('diff')
+  const [viewMode, setViewMode] = useState<'diff' | 'split' | 'full'>('diff')
 
   const displayPath = file.status === 'renamed'
     ? `${file.oldPath} → ${file.newPath}`
@@ -137,9 +138,21 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
                   ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
                   : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)]'
               )}
-              title='Show diff hunks only'
+              title='Unified diff view'
             >
-              Diff
+              Unified
+            </button>
+            <button
+              onClick={() => setViewMode('split')}
+              className={cn(
+                'px-2 py-1 text-xs border border-l-0 border-[var(--gh-border)] transition-colors',
+                viewMode === 'split'
+                  ? 'bg-[var(--gh-accent-primary)] text-[var(--gh-bg-primary)] border-[var(--gh-accent-primary)]'
+                  : 'bg-[var(--gh-bg-elevated)] text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)]'
+              )}
+              title='Side-by-side diff view'
+            >
+              Split
             </button>
             <button
               onClick={() => setViewMode('full')}
@@ -201,17 +214,24 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
                             onLineClick={onLineClick}
                           />
                           )
-                        : (
-                            hunks.map((hunk, index) => (
-                              <DiffHunk
-                                key={index}
-                                hunk={hunk}
-                                filePath={filePath}
-                                allowComments={allowComments}
-                                onLineClick={onLineClick}
-                              />
-                            ))
-                          )}
+                        : viewMode === 'split'
+                          ? (
+                            <SideBySideDiffView
+                              hunks={hunks}
+                              filePath={filePath}
+                            />
+                            )
+                          : (
+                              hunks.map((hunk, index) => (
+                                <DiffHunk
+                                  key={index}
+                                  hunk={hunk}
+                                  filePath={filePath}
+                                  allowComments={allowComments}
+                                  onLineClick={onLineClick}
+                                />
+                              ))
+                            )}
         </div>
       )}
     </div>

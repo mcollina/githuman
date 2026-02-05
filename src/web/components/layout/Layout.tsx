@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Header } from './Header'
 import { TodoDrawer } from '../todos'
 import { LoginForm } from '../auth'
+import { VersionBanner } from '../VersionBanner'
 import { useRepositoryInfo } from '../../hooks/useRepositoryInfo'
 import { useTodoStats } from '../../hooks/useTodos'
 import { useAuth } from '../../hooks/useAuth'
@@ -28,6 +29,7 @@ export function Layout () {
 
   return (
     <div className='min-h-screen flex flex-col bg-[var(--gh-bg-primary)]'>
+      <VersionBanner />
       <Header
         repoName={repoInfo?.name}
         branch={repoInfo?.branch}
