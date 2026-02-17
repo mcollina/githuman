@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar } from '../../../src/web/components/layout/Sidebar'
+import { SettingsProvider } from '../../../src/web/contexts/SettingsContext'
 import type { DiffFile } from '../../../src/shared/types'
 
 describe('Sidebar', () => {
@@ -31,21 +32,29 @@ describe('Sidebar', () => {
     },
   ]
 
+  const renderSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
+    return render(
+      <SettingsProvider>
+        <Sidebar {...props} />
+      </SettingsProvider>
+    )
+  }
+
   it('renders empty state when no files', () => {
-    render(<Sidebar files={[]} onFileSelect={() => {}} />)
+    renderSidebar({ files: [], onFileSelect: () => {} })
 
     expect(screen.getByText('No files to display')).toBeDefined()
   })
 
   it('renders file count', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     expect(screen.getByText('Files')).toBeDefined()
     expect(screen.getByText('(3)')).toBeDefined()
   })
 
   it('renders full file paths', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     expect(screen.getByText('src/app.ts')).toBeDefined()
     expect(screen.getByText('src/utils.ts')).toBeDefined()
@@ -53,7 +62,7 @@ describe('Sidebar', () => {
   })
 
   it('renders status indicators', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     expect(screen.getByText('M')).toBeDefined() // Modified
     expect(screen.getByText('A')).toBeDefined() // Added
@@ -61,7 +70,7 @@ describe('Sidebar', () => {
   })
 
   it('renders addition/deletion counts', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     expect(screen.getByText('+5')).toBeDefined()
     expect(screen.getByText('-2')).toBeDefined()
@@ -69,7 +78,7 @@ describe('Sidebar', () => {
 
   it('calls onFileSelect when file is clicked', () => {
     const onFileSelect = vi.fn()
-    render(<Sidebar files={mockFiles} onFileSelect={onFileSelect} />)
+    renderSidebar({ files: mockFiles, onFileSelect })
 
     fireEvent.click(screen.getByText('src/app.ts'))
 
@@ -77,9 +86,11 @@ describe('Sidebar', () => {
   })
 
   it('highlights selected file', () => {
-    const { container } = render(
-      <Sidebar files={mockFiles} selectedFile='src/app.ts' onFileSelect={() => {}} />
-    )
+    const { container } = renderSidebar({
+      files: mockFiles,
+      selectedFile: 'src/app.ts',
+      onFileSelect: () => {},
+    })
 
     // Check for the selected file styling (uses CSS variable)
     const selectedButton = container.querySelector('[class*="--gh-bg-surface"]')
@@ -87,7 +98,7 @@ describe('Sidebar', () => {
   })
 
   it('filters files by path', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     const filterInput = screen.getByPlaceholderText('Filter files...')
     fireEvent.change(filterInput, { target: { value: 'app' } })
@@ -98,7 +109,7 @@ describe('Sidebar', () => {
   })
 
   it('shows no matching files message when filter has no results', () => {
-    render(<Sidebar files={mockFiles} onFileSelect={() => {}} />)
+    renderSidebar({ files: mockFiles, onFileSelect: () => {} })
 
     const filterInput = screen.getByPlaceholderText('Filter files...')
     fireEvent.change(filterInput, { target: { value: 'nonexistent' } })
