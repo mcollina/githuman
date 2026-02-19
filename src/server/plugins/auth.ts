@@ -39,6 +39,11 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (
   fastify.decorate('authEnabled', true)
 
   fastify.addHook('preHandler', async (request, reply) => {
+    // Skip auth for 404
+    if (request.is404) {
+      return
+    }
+
     // Skip auth for health endpoint
     if (request.url === '/api/health') {
       return
