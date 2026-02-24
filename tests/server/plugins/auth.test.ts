@@ -74,6 +74,15 @@ describe('auth plugin', () => {
         assert.deepStrictEqual(JSON.parse(response.body), { message: 'ok' })
       })
 
+      it('should skip auth for 404 endpoint', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: '/api/non-existent-endpoint',
+        })
+
+        assert.strictEqual(response.statusCode, 404)
+      })
+
       it('should skip auth for /api/health endpoint', async () => {
         const response = await app.inject({
           method: 'GET',
