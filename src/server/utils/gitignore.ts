@@ -2,7 +2,7 @@
  * Utilities for loading and parsing .gitignore files
  */
 import ignore, { type Ignore } from 'ignore'
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join, relative, sep } from 'node:path'
 import type { FastifyBaseLogger } from 'fastify'
 
@@ -22,33 +22,24 @@ export async function findGitignoreFiles (dir: string, log?: Logger): Promise<st
 
   while (dirIndex < dirsToWalk.length) {
     const currentDir = dirsToWalk[dirIndex++]
-    let entries: string[]
     try {
-      entries = await readdir(currentDir)
+      const entries = await readdir(currentDir, { withFileTypes: true })
+
+      for (const entry of entries) {
+        // Skip .git and node_modules for performance
+        if (entry.name === '.git' || entry.name === 'node_modules') continue
+
+        if (entry.name === '.gitignore') {
+          gitignoreFiles.push(join(currentDir, entry.name))
+          continue
+        }
+
+        if (entry.isDirectory()) {
+          dirsToWalk.push(join(currentDir, entry.name))
+        }
+      }
     } catch (err) {
       log?.warn({ err, path: currentDir }, 'Failed to read directory while scanning for .gitignore files')
-      continue
-    }
-
-    for (const entry of entries) {
-      const fullPath = join(currentDir, entry)
-
-      // Skip .git and node_modules for performance
-      if (entry === '.git' || entry === 'node_modules') continue
-
-      if (entry === '.gitignore') {
-        gitignoreFiles.push(fullPath)
-        continue
-      }
-
-      try {
-        const stats = await stat(fullPath)
-        if (stats.isDirectory()) {
-          dirsToWalk.push(fullPath)
-        }
-      } catch {
-        // Skip entries we can't stat (common for broken symlinks)
-      }
     }
   }
 
