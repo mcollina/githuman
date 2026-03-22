@@ -6,56 +6,74 @@ import { DiffView } from './DiffView'
 import { useCommentContext } from '../../contexts/CommentContext'
 import { useFileTree } from '../../hooks/useFileTree'
 import { cn } from '../../lib/utils'
-import type { DiffFile, DiffFileMetadata, DiffSummary, FileTreeNode } from '../../../shared/types'
+import type {
+  DiffFile,
+  DiffFileMetadata,
+  DiffSummary,
+  FileTreeNode,
+} from '../../../shared/types'
 
 interface BrowsableDiffViewProps {
   // Diff data
-  files: (DiffFileMetadata | DiffFile)[];
-  summary?: DiffSummary;
-  selectedFile?: string;
-  onFileSelect?: (path: string) => void;
-  allowComments?: boolean;
-  reviewId?: string; // If provided, enables lazy loading of hunks
-  onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
-  version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
+  files: (DiffFileMetadata | DiffFile)[]
+  summary?: DiffSummary
+  selectedFile?: string
+  onFileSelect?: (path: string) => void
+  allowComments?: boolean
+  reviewId?: string // If provided, enables lazy loading of hunks
+  onLineClick?: (
+    filePath: string,
+    lineNumber: number,
+    lineType: 'added' | 'removed' | 'context',
+  ) => void
+  version?: 'staged' | 'working' // Version for fetching file content (markdown preview, images)
 
   // Staging props (for unstaged view)
-  showStageButtons?: boolean;
-  onStageFile?: (path: string) => void;
-  staging?: boolean;
+  showStageButtons?: boolean
+  onStageFile?: (path: string) => void
+  staging?: boolean
 
   // Browse mode props
-  browseRef: string;
-  changedFilePaths?: string[];
-  includeWorkingDir?: boolean;
+  browseRef: string
+  changedFilePaths?: string[]
+  includeWorkingDir?: boolean
 
   // External browse mode control (optional - uses internal state if not provided)
-  browseMode?: boolean;
-  onBrowseModeChange?: (enabled: boolean) => void;
+  browseMode?: boolean
+  onBrowseModeChange?: (enabled: boolean) => void
 
   // External mobile drawer control (optional - uses internal state if not provided)
-  mobileDrawerOpen?: boolean;
-  onMobileDrawerChange?: (open: boolean) => void;
+  mobileDrawerOpen?: boolean
+  onMobileDrawerChange?: (open: boolean) => void
 
   // Header toggle visibility (hidden on mobile, shown in sidebar instead)
-  showHeaderToggle?: boolean;
+  showHeaderToggle?: boolean
 
   // Optional content to render above the diff view (e.g., hints)
-  contentHeader?: ReactNode;
+  contentHeader?: ReactNode
 
   // Whether to show contentHeader in browse mode too (default: false, only shows in diff mode)
-  showContentHeaderInBrowseMode?: boolean;
+  showContentHeaderInBrowseMode?: boolean
 }
 
-function FileTreeWithComments ({ tree, selectedFile, onFileSelect, loading, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: {
-  tree: FileTreeNode[];
-  selectedFile: string | null;
-  onFileSelect: (path: string) => void;
-  loading?: boolean;
-  browseMode?: boolean;
-  onBrowseModeChange?: (enabled: boolean) => void;
-  mobileDrawerOpen?: boolean;
-  onMobileDrawerChange?: (open: boolean) => void;
+function FileTreeWithComments ({
+  tree,
+  selectedFile,
+  onFileSelect,
+  loading,
+  browseMode,
+  onBrowseModeChange,
+  mobileDrawerOpen,
+  onMobileDrawerChange,
+}: {
+  tree: FileTreeNode[]
+  selectedFile: string | null
+  onFileSelect: (path: string) => void
+  loading?: boolean
+  browseMode?: boolean
+  onBrowseModeChange?: (enabled: boolean) => void
+  mobileDrawerOpen?: boolean
+  onMobileDrawerChange?: (open: boolean) => void
 }) {
   const commentContext = useCommentContext()
 
@@ -113,14 +131,20 @@ export function BrowsableDiffView ({
   const browseMode = externalBrowseMode ?? internalBrowseMode
   const setBrowseMode = externalOnBrowseModeChange ?? setInternalBrowseMode
 
-  const [browseSelectedFile, setBrowseSelectedFile] = useState<string | null>(null)
+  const [browseSelectedFile, setBrowseSelectedFile] = useState<string | null>(
+    null
+  )
 
   // Mobile drawer state (use external if provided, otherwise internal)
-  const [internalMobileDrawerOpen, setInternalMobileDrawerOpen] = useState(false)
+  const [internalMobileDrawerOpen, setInternalMobileDrawerOpen] =
+    useState(false)
   const mobileDrawerOpen = externalMobileDrawerOpen ?? internalMobileDrawerOpen
-  const setMobileDrawerOpen = externalOnMobileDrawerChange ?? setInternalMobileDrawerOpen
+  const setMobileDrawerOpen =
+    externalOnMobileDrawerChange ?? setInternalMobileDrawerOpen
 
-  const [internalSelectedFile, setInternalSelectedFile] = useState<string | undefined>()
+  const [internalSelectedFile, setInternalSelectedFile] = useState<
+    string | undefined
+  >()
 
   // Use external or internal file selection
   const effectiveSelectedFile = selectedFile ?? internalSelectedFile
@@ -133,7 +157,11 @@ export function BrowsableDiffView ({
   }, [changedFilePaths, files])
 
   // File tree for browse mode
-  const { tree, loading: treeLoading } = useFileTree(browseMode ? browseRef : '', effectiveChangedFilePaths, { includeWorkingDir })
+  const { tree, loading: treeLoading } = useFileTree(
+    browseMode ? browseRef : '',
+    effectiveChangedFilePaths,
+    { includeWorkingDir }
+  )
 
   const handleBrowseModeChange = (enabled: boolean) => {
     setBrowseMode(enabled)
@@ -150,7 +178,7 @@ export function BrowsableDiffView ({
   }, [browseMode])
 
   return (
-    <div className='flex-1 flex min-w-0'>
+    <div className='flex-1 flex min-w-0 overflow-hidden'>
       {browseMode
         ? (
           <FileTreeWithComments
@@ -189,13 +217,14 @@ export function BrowsableDiffView ({
                 onChange={(e) => handleBrowseModeChange(e.target.checked)}
                 className='sr-only peer'
               />
-              <span className={cn(
-                'relative w-9 h-5 rounded-full transition-colors',
-                'peer-checked:bg-[var(--gh-accent-primary)] bg-[var(--gh-bg-elevated)]',
-                'after:content-[""] after:absolute after:top-0.5 after:left-0.5',
-                'after:w-4 after:h-4 after:rounded-full after:bg-white',
-                'after:transition-transform peer-checked:after:translate-x-4'
-              )}
+              <span
+                className={cn(
+                  'relative w-9 h-5 rounded-full transition-colors',
+                  'peer-checked:bg-[var(--gh-accent-primary)] bg-[var(--gh-bg-elevated)]',
+                  'after:content-[""] after:absolute after:top-0.5 after:left-0.5',
+                  'after:w-4 after:h-4 after:rounded-full after:bg-white',
+                  'after:transition-transform peer-checked:after:translate-x-4'
+                )}
               />
               <span className='text-xs text-[var(--gh-text-secondary)]'>
                 Browse full codebase
@@ -215,17 +244,31 @@ export function BrowsableDiffView ({
                   <BrowseFileView
                     filePath={browseSelectedFile}
                     ref={browseRef}
-                    isChangedFile={effectiveChangedFilePaths.includes(browseSelectedFile)}
+                    isChangedFile={effectiveChangedFilePaths.includes(
+                      browseSelectedFile
+                    )}
                     allowComments={allowComments}
                   />
                   )
                 : (
                   <div className='flex-1 flex items-center justify-center p-8'>
                     <div className='text-center'>
-                      <svg className='w-12 h-12 mx-auto mb-4 text-[var(--gh-text-muted)]' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' />
+                      <svg
+                        className='w-12 h-12 mx-auto mb-4 text-[var(--gh-text-muted)]'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={1.5}
+                          d='M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'
+                        />
                       </svg>
-                      <p className='text-[var(--gh-text-muted)]'>Select a file from the tree to view</p>
+                      <p className='text-[var(--gh-text-muted)]'>
+                        Select a file from the tree to view
+                      </p>
                     </div>
                   </div>
                   )

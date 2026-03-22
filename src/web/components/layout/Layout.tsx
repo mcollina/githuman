@@ -27,7 +27,7 @@ export function Layout () {
   }
 
   return (
-    <div className='min-h-screen flex flex-col bg-[var(--gh-bg-primary)]'>
+    <div className='h-screen flex flex-col overflow-hidden bg-[var(--gh-bg-primary)]'>
       <Header
         repoName={repoInfo?.name}
         branch={repoInfo?.branch}
@@ -35,7 +35,7 @@ export function Layout () {
         todosOpen={todosOpen}
         pendingTodos={stats?.pending}
       />
-      <main className='flex-1 flex min-w-0'>
+      <main className='flex-1 flex min-w-0 overflow-hidden'>
         <Outlet />
       </main>
       <TodoDrawer isOpen={todosOpen} onClose={handleCloseTodos} />

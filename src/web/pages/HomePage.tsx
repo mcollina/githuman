@@ -18,14 +18,13 @@ function getStatusBadge (status: ReviewStatus) {
     changes_requested: 'Changes Requested',
   }
 
-  return (
-    <span className={styles[status]}>
-      {labels[status]}
-    </span>
-  )
+  return <span className={styles[status]}>{labels[status]}</span>
 }
 
-function getSourceLabel (sourceType: ReviewSourceType, sourceRef: string | null) {
+function getSourceLabel (
+  sourceType: ReviewSourceType,
+  sourceRef: string | null
+) {
   if (sourceType === 'staged') {
     return 'Staged changes'
   }
@@ -79,16 +78,28 @@ export function HomePage () {
   }
 
   return (
-    <div className='flex-1 p-6'>
+    <div className='flex-1 p-6 overflow-y-auto'>
       <div className='max-w-4xl mx-auto'>
         <div className='flex items-center justify-between mb-8'>
-          <h1 className='text-2xl font-bold text-[var(--gh-text-primary)]'>Reviews</h1>
+          <h1 className='text-2xl font-bold text-[var(--gh-text-primary)]'>
+            Reviews
+          </h1>
           <Link
             to='/new'
             className='gh-btn gh-btn-primary inline-flex items-center text-sm'
           >
-            <svg className='w-4 h-4 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
+            <svg
+              className='w-4 h-4 mr-2'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M12 4v16m8-8H4'
+              />
             </svg>
             New Review
           </Link>
@@ -97,7 +108,9 @@ export function HomePage () {
         {loading && (
           <div className='text-center py-12'>
             <div className='gh-spinner w-8 h-8 mx-auto' />
-            <p className='mt-4 text-[var(--gh-text-secondary)]'>Loading reviews...</p>
+            <p className='mt-4 text-[var(--gh-text-secondary)]'>
+              Loading reviews...
+            </p>
           </div>
         )}
 
@@ -110,9 +123,15 @@ export function HomePage () {
         {data && data.reviews.length === 0 && (
           <div className='text-center py-16 gh-card gh-animate-in'>
             <div className='mb-6'>
-              <Logo size='lg' showText={false} className='justify-center opacity-30' />
+              <Logo
+                size='lg'
+                showText={false}
+                className='justify-center opacity-30'
+              />
             </div>
-            <p className='text-lg font-semibold text-[var(--gh-text-primary)]'>No reviews yet</p>
+            <p className='text-lg font-semibold text-[var(--gh-text-primary)]'>
+              No reviews yet
+            </p>
             <p className='text-[var(--gh-text-secondary)] mt-2 max-w-sm mx-auto'>
               Create a new review from staged changes, branches, or commits.
             </p>
@@ -146,9 +165,15 @@ export function HomePage () {
                       <span className='font-mono'>
                         {review.summary.totalFiles} files
                       </span>
-                      <span className='font-mono text-[var(--gh-success)]'>+{review.summary.totalAdditions}</span>
-                      <span className='font-mono text-[var(--gh-error)]'>-{review.summary.totalDeletions}</span>
-                      <span className='text-[var(--gh-text-muted)]'>{formatDate(review.createdAt)}</span>
+                      <span className='font-mono text-[var(--gh-success)]'>
+                        +{review.summary.totalAdditions}
+                      </span>
+                      <span className='font-mono text-[var(--gh-error)]'>
+                        -{review.summary.totalDeletions}
+                      </span>
+                      <span className='text-[var(--gh-text-muted)]'>
+                        {formatDate(review.createdAt)}
+                      </span>
                     </div>
                   </div>
                   <button
@@ -156,8 +181,18 @@ export function HomePage () {
                     className='ml-4 p-2 text-[var(--gh-text-muted)] hover:text-[var(--gh-error)] hover:bg-[var(--gh-error)]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100'
                     title='Delete review'
                   >
-                    <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' />
+                    <svg
+                      className='w-4 h-4'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+                      />
                     </svg>
                   </button>
                 </div>
@@ -178,9 +213,12 @@ export function HomePage () {
         <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50'>
           <div className='gh-card w-full max-w-sm mx-4 gh-animate-in'>
             <div className='p-5'>
-              <h2 className='text-lg font-bold text-[var(--gh-text-primary)]'>Delete Review</h2>
+              <h2 className='text-lg font-bold text-[var(--gh-text-primary)]'>
+                Delete Review
+              </h2>
               <p className='mt-2 text-sm text-[var(--gh-text-secondary)]'>
-                Are you sure you want to delete this review? This action cannot be undone.
+                Are you sure you want to delete this review? This action cannot
+                be undone.
               </p>
             </div>
             <div className='p-4 border-t border-[var(--gh-border)] flex justify-end gap-3'>
