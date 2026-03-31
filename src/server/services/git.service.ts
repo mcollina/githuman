@@ -4,6 +4,7 @@
 import { simpleGit, type SimpleGit } from 'simple-git'
 import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
+import { stripVTControlCharacters } from 'node:util'
 import { join } from 'node:path'
 import { requestContext } from '../app.ts'
 import type { RepositoryInfo } from '../../shared/types.ts'
@@ -20,6 +21,20 @@ export class GitService {
   /** Get the logger from request context */
   private get log () {
     return requestContext.get('log')
+  }
+
+  private sanitizeGitTextOutput (output: string): string {
+    return stripVTControlCharacters(output)
+  }
+
+  private async getPlainDiff (args: string[] = []): Promise<string> {
+    const output = await this.git.diff(['--no-color', '--no-ext-diff', ...args])
+    return this.sanitizeGitTextOutput(output)
+  }
+
+  private async getPlainShowDiff (args: string[] = []): Promise<string> {
+    const output = await this.git.show(['--no-color', '--no-ext-diff', ...args])
+    return this.sanitizeGitTextOutput(output)
   }
 
   /**
@@ -146,7 +161,7 @@ export class GitService {
    */
   private async isFileStaged (filePath: string): Promise<boolean> {
     try {
-      const result = await this.git.diff(['--cached', '--name-only', '--', filePath])
+      const result = await this.getPlainDiff(['--cached', '--name-only', '--', filePath])
       return result.trim().length > 0
     } catch (err) {
       this.log?.debug({ err, filePath }, 'isFileStaged check failed')
@@ -158,7 +173,7 @@ export class GitService {
    * Get unified diff for all staged changes
    */
   async getStagedDiff (): Promise<string> {
-    const diff = await this.git.diff(['--cached'])
+    const diff = await this.getPlainDiff(['--cached'])
     return diff
   }
 
@@ -166,7 +181,7 @@ export class GitService {
    * Get unified diff for a specific staged file
    */
   async getStagedFileDiff (filePath: string): Promise<string> {
-    const diff = await this.git.diff(['--cached', '--', filePath])
+    const diff = await this.getPlainDiff(['--cached', '--', filePath])
     return diff
   }
 
@@ -174,7 +189,7 @@ export class GitService {
    * Get diff statistics for staged changes
    */
   async getStagedDiffStats (): Promise<DiffStats> {
-    const numstat = await this.git.diff(['--cached', '--numstat'])
+    const numstat = await this.getPlainDiff(['--cached', '--numstat'])
 
     const files: FileDiffStats[] = []
     const lines = numstat.trim().split('\n').filter(Boolean)
@@ -203,7 +218,7 @@ export class GitService {
    * Check if there are any staged changes
    */
   async hasStagedChanges (): Promise<boolean> {
-    const diff = await this.git.diff(['--cached', '--name-only'])
+    const diff = await this.getPlainDiff(['--cached', '--name-only'])
     return diff.trim().length > 0
   }
 
@@ -264,7 +279,7 @@ export class GitService {
    */
   async getUnstagedDiff (): Promise<string> {
     // Get regular diff for tracked files
-    const diff = await this.git.diff()
+    const diff = await this.getPlainDiff()
 
     // Get untracked files and generate diff for them
     const status = await this.git.status()
@@ -287,8 +302,8 @@ export class GitService {
 
         const diffLines = lines.map(line => `+${line}`)
         untrackedDiffs.push([...diffHeader, ...diffLines].join('\n'))
-      } catch {
-        // Skip files that can't be read (binary, permission issues, etc.)
+      } catch (err) {
+        this.log?.debug({ err, filePath }, 'getUnstagedDiff skipped unreadable untracked file')
       }
     }
 
@@ -491,7 +506,7 @@ export class GitService {
    */
   async getBranchDiff (targetBranch: string): Promise<string> {
     // Get diff from target branch to HEAD (shows what's in HEAD, not in target branch)
-    const diff = await this.git.diff([`${targetBranch}...HEAD`])
+    const diff = await this.getPlainDiff([`${targetBranch}...HEAD`])
     return diff
   }
 
@@ -500,7 +515,7 @@ export class GitService {
    */
   async getBranchFileDiff (targetBranch: string, filePath: string): Promise<string> {
     try {
-      const diff = await this.git.diff([`${targetBranch}...HEAD`, '--', filePath])
+      const diff = await this.getPlainDiff([`${targetBranch}...HEAD`, '--', filePath])
       return diff
     } catch (err) {
       this.log?.debug({ err, targetBranch, filePath }, 'getBranchFileDiff failed')
@@ -518,7 +533,7 @@ export class GitService {
 
     if (commits.length === 1) {
       // Single commit - show that commit's diff
-      const diff = await this.git.show([commits[0], '--format='])
+      const diff = await this.getPlainShowDiff([commits[0], '--format='])
       return diff
     }
 
@@ -526,7 +541,7 @@ export class GitService {
     // This works regardless of commit order or whether they're contiguous
     const diffs: string[] = []
     for (const commit of commits) {
-      const diff = await this.git.show([commit, '--format='])
+      const diff = await this.getPlainShowDiff([commit, '--format='])
       if (diff.trim()) {
         diffs.push(diff)
       }
@@ -546,7 +561,7 @@ export class GitService {
     const diffs: string[] = []
     for (const commit of commits) {
       try {
-        const diff = await this.git.show([commit, '--format=', '--', filePath])
+        const diff = await this.getPlainShowDiff([commit, '--format=', '--', filePath])
         if (diff.trim()) {
           diffs.push(diff)
         }

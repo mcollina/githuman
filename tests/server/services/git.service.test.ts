@@ -58,6 +58,15 @@ function createTestRepoWithMultipleCommits (t: TestContext): string {
   return tempDir
 }
 
+function assertHasNoTerminalControlCharacters (value: string, message: string): void {
+  const hasTerminalControlCharacter = Array.from(value).some(char => {
+    const charCode = char.charCodeAt(0)
+    return charCode === 0x1B || charCode === 0x9B
+  })
+
+  assert.ok(!hasTerminalControlCharacter, message)
+}
+
 describe('git.service', () => {
   describe('getCommits', () => {
     it('should return an array of commits', async (t) => {
@@ -159,6 +168,7 @@ describe('git.service', () => {
       // Diff should be a string with content (our test repo has real changes)
       assert.ok(typeof diff === 'string')
       assert.ok(diff.length > 0, 'Diff should have content')
+      assertHasNoTerminalControlCharacters(diff, 'commit diff should not include terminal control characters')
     })
 
     it('should return combined diff for multiple commits', async (t) => {
@@ -173,6 +183,7 @@ describe('git.service', () => {
       // Should return a string with diff content
       assert.ok(typeof diff === 'string')
       assert.ok(diff.length > 0, 'Combined diff should have content')
+      assertHasNoTerminalControlCharacters(diff, 'combined commit diff should not include terminal control characters')
     })
 
     it('should handle commits in any order', async (t) => {
@@ -217,6 +228,7 @@ describe('git.service', () => {
 
       const diff = await testGit.getCommitsFileDiff([sha], 'src.ts')
       assert.ok(diff.includes('src.ts'))
+      assertHasNoTerminalControlCharacters(diff, 'commit diff should not include terminal control characters')
       assert.ok(diff.includes('+const x = 1;'))
     })
 
@@ -270,6 +282,7 @@ describe('git.service', () => {
       // Stay on feature branch and compare against main (shows what's in feature, not in main)
       const diff = await testGit.getBranchFileDiff(mainBranch, 'feature.ts')
       assert.ok(diff.includes('feature.ts'))
+      assertHasNoTerminalControlCharacters(diff, 'branch diff should not include terminal control characters')
       assert.ok(diff.includes('+const y = 1;'))
     })
 
@@ -296,6 +309,25 @@ describe('git.service', () => {
 
       const diff = await testGit.getBranchFileDiff('non-existent-branch', 'README.md')
       assert.strictEqual(diff, '')
+    })
+  })
+
+  describe('getBranchDiff', () => {
+    it('should return diff between the current branch and a target branch', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
+
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'feature.ts'), 'const y = 1;\n')
+      execSync('git add feature.ts && git commit -m "Add feature.ts"', { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getBranchDiff(mainBranch)
+
+      assert.ok(diff.includes('feature.ts'))
+      assertHasNoTerminalControlCharacters(diff, 'branch diff should not include terminal control characters')
+      assert.ok(diff.includes('+const y = 1;'))
     })
   })
 
@@ -462,6 +494,7 @@ describe('git.service', () => {
       const diff = await testGit.getUnstagedDiff()
       assert.ok(diff.includes('README.md'))
       assert.ok(diff.includes('-# Test'))
+      assertHasNoTerminalControlCharacters(diff, 'unstaged diff should not include terminal control characters')
       assert.ok(diff.includes('+# Updated content'))
     })
 
@@ -477,6 +510,38 @@ describe('git.service', () => {
       assert.ok(diff.includes('new file mode'), 'should indicate new file')
       assert.ok(diff.includes('+line 1'), 'should show new file content as added')
       assert.ok(diff.includes('+line 2'), 'should show all lines as added')
+    })
+  })
+
+  describe('getStagedDiff', () => {
+    it('should return diff for staged files', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      writeFileSync(join(tempDir, 'README.md'), '# Updated content\n')
+      execSync('git add README.md', { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getStagedDiff()
+      assert.ok(diff.includes('README.md'))
+      assert.ok(diff.includes('-# Test'))
+      assertHasNoTerminalControlCharacters(diff, 'staged diff should not include terminal control characters')
+      assert.ok(diff.includes('+# Updated content'))
+    })
+  })
+
+  describe('getStagedFileDiff', () => {
+    it('should return diff for a specific staged file', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const testGit = new GitService(tempDir)
+
+      writeFileSync(join(tempDir, 'README.md'), '# Updated content\n')
+      execSync('git add README.md', { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getStagedFileDiff('README.md')
+      assert.ok(diff.includes('README.md'))
+      assert.ok(diff.includes('-# Test'))
+      assertHasNoTerminalControlCharacters(diff, 'staged file diff should not include terminal control characters')
+      assert.ok(diff.includes('+# Updated content'))
     })
   })
 
