@@ -485,16 +485,42 @@ export class GitService {
     }
   }
 
+  private async getAuthoritativeRemoteHeadBranch (): Promise<string | null> {
+    try {
+      const remoteHead = await this.git.raw(['ls-remote', '--symref', 'origin', 'HEAD'])
+      const match = remoteHead.match(/^ref: refs\/heads\/(.+)\tHEAD$/m)
+      return match?.[1] ?? null
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'getAuthoritativeRemoteHeadBranch failed')
+      return null
+    }
+  }
+
+  private async isAncestorBranch (ancestor: string, descendant: string): Promise<boolean> {
+    try {
+      await this.git.raw(['merge-base', '--is-ancestor', ancestor, descendant])
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /**
    * Get the default branch for the repository.
-   * Prefers origin/HEAD when available, then falls back to main/master.
+   * Prefers authoritative remote HEAD when available, then falls back to local refs.
    */
   async getDefaultBranch (): Promise<string> {
+    const authoritativeRemoteHead = await this.getAuthoritativeRemoteHeadBranch()
+    if (authoritativeRemoteHead) {
+      return authoritativeRemoteHead
+    }
+
+    let symbolicRemoteHead: string | null = null
     try {
       const remoteHead = await this.git.raw(['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'])
       const branch = remoteHead.trim().replace(/^origin\//, '')
       if (branch) {
-        return branch
+        symbolicRemoteHead = branch
       }
     } catch (err) {
       this.log?.debug({ err, repoPath: this.repoPath }, 'getDefaultBranch remote HEAD lookup failed')
@@ -502,10 +528,24 @@ export class GitService {
 
     try {
       const branches = await this.getBranches()
-      if (branches.some(branch => branch.name === 'main')) {
+      const hasMain = branches.some(branch => branch.name === 'main')
+      const hasMaster = branches.some(branch => branch.name === 'master')
+
+      if (symbolicRemoteHead === 'master' && hasMain && hasMaster) {
+        const masterIsAncestorOfMain = await this.isAncestorBranch('master', 'main')
+        if (masterIsAncestorOfMain) {
+          return 'main'
+        }
+      }
+
+      if (symbolicRemoteHead) {
+        return symbolicRemoteHead
+      }
+
+      if (hasMain) {
         return 'main'
       }
-      if (branches.some(branch => branch.name === 'master')) {
+      if (hasMaster) {
         return 'master'
       }
     } catch (err) {
@@ -523,6 +563,36 @@ export class GitService {
     const resolvedBaseBranch = baseBranch ?? await this.getDefaultBranch()
     const diff = await this.git.diff([`${resolvedBaseBranch}...${branchToReview}`])
     return diff
+  }
+
+  /**
+   * Get file metadata for a branch review without loading the full patch.
+   * This keeps large branch reviews responsive and avoids materializing huge diff strings.
+   */
+  async getBranchDiffMetadata (branchToReview: string, baseBranch?: string): Promise<DiffFileMetadata[]> {
+    const resolvedBaseBranch = baseBranch ?? await this.getDefaultBranch()
+    const range = `${resolvedBaseBranch}...${branchToReview}`
+
+    const [nameStatus, numstat] = await Promise.all([
+      this.git.raw(['diff', '-M', '--name-status', '-z', range]),
+      this.git.raw(['diff', '-M', '--numstat', '-z', range]),
+    ])
+
+    const files = this.parseNameStatusEntries(nameStatus)
+    const stats = this.parseNumstatEntries(numstat)
+
+    return files.map((file) => {
+      const key = file.status === 'renamed'
+        ? `${file.oldPath}\0${file.newPath}`
+        : file.newPath
+      const stat = stats.get(key)
+
+      return {
+        ...file,
+        additions: stat?.additions ?? 0,
+        deletions: stat?.deletions ?? 0,
+      }
+    })
   }
 
   /**
@@ -619,6 +689,68 @@ export class GitService {
       seen.add(b.name)
       return true
     })
+  }
+
+  private parseNameStatusEntries (rawOutput: string): Array<Pick<DiffFileMetadata, 'oldPath' | 'newPath' | 'status'>> {
+    const entries = rawOutput.split('\0').filter(Boolean)
+    const files: Array<Pick<DiffFileMetadata, 'oldPath' | 'newPath' | 'status'>> = []
+
+    for (let i = 0; i < entries.length; i++) {
+      const statusCode = entries[i]
+      const kind = statusCode[0]
+
+      if (!kind) continue
+
+      if (kind === 'R') {
+        const oldPath = entries[i + 1] ?? ''
+        const newPath = entries[i + 2] ?? oldPath
+        files.push({
+          oldPath,
+          newPath,
+          status: 'renamed',
+        })
+        i += 2
+        continue
+      }
+
+      const path = entries[i + 1] ?? ''
+      files.push({
+        oldPath: path,
+        newPath: path,
+        status: kind === 'A'
+          ? 'added'
+          : kind === 'D'
+            ? 'deleted'
+            : 'modified',
+      })
+      i += 1
+    }
+
+    return files
+  }
+
+  private parseNumstatEntries (rawOutput: string): Map<string, Pick<DiffFileMetadata, 'additions' | 'deletions'>> {
+    const entries = rawOutput.split('\0').filter(Boolean)
+    const stats = new Map<string, Pick<DiffFileMetadata, 'additions' | 'deletions'>>()
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]
+      const [additionsRaw = '0', deletionsRaw = '0', pathOrMarker = ''] = entry.split('\t')
+      const additions = additionsRaw === '-' ? 0 : parseInt(additionsRaw, 10)
+      const deletions = deletionsRaw === '-' ? 0 : parseInt(deletionsRaw, 10)
+
+      if (pathOrMarker === '') {
+        const oldPath = entries[i + 1] ?? ''
+        const newPath = entries[i + 2] ?? oldPath
+        stats.set(`${oldPath}\0${newPath}`, { additions, deletions })
+        i += 2
+        continue
+      }
+
+      stats.set(pathOrMarker, { additions, deletions })
+    }
+
+    return stats
   }
 
   /**
@@ -752,6 +884,14 @@ export interface DiffStats {
   totalFiles: number;
   totalAdditions: number;
   totalDeletions: number;
+}
+
+export interface DiffFileMetadata {
+  oldPath: string;
+  newPath: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed';
+  additions: number;
+  deletions: number;
 }
 
 export interface BranchInfo {

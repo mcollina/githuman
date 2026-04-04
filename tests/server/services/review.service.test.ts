@@ -151,6 +151,45 @@ describe('ReviewService', () => {
       assert.strictEqual(review.files[0].status, 'added')
     })
 
+    it('should create a branch review from metadata without loading the full patch', async (t) => {
+      const tempDir = createTestRepo(t)
+      const service = new ReviewService(db, tempDir)
+      const git = (service as any).git
+
+      git.isRepo = async () => true
+      git.hasCommits = async () => true
+      git.getDefaultBranch = async () => 'main'
+      git.getBranchDiff = async () => {
+        throw new Error('full branch diff should not be loaded')
+      }
+      git.getBranchDiffMetadata = async () => ([
+        {
+          oldPath: 'large-file.ts',
+          newPath: 'large-file.ts',
+          status: 'modified',
+          additions: 1200,
+          deletions: 300,
+        },
+      ])
+      git.getRepositoryInfo = async () => ({
+        name: 'test-repo',
+        branch: 'main',
+        remote: null,
+        path: tempDir,
+      })
+
+      const review = await service.create({ sourceType: 'branch', sourceRef: 'feature' })
+
+      assert.strictEqual(review.baseRef, 'main')
+      assert.strictEqual(review.files.length, 1)
+      assert.strictEqual(review.summary.totalAdditions, 1200)
+      assert.strictEqual(review.summary.totalDeletions, 300)
+
+      const file = fileRepo.findByReviewAndPath(review.id, 'large-file.ts')
+      assert.ok(file)
+      assert.strictEqual(file.hunksData, null)
+    })
+
     it('should throw error when no staged changes', async (t) => {
       const tempDir = createTestRepo(t)
       const service = new ReviewService(db, tempDir)

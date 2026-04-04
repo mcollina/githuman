@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import { ReviewRepository } from '../repositories/review.repo.ts'
 import { ReviewFileRepository, type CreateReviewFileInput } from '../repositories/review-file.repo.ts'
-import { GitService } from './git.service.ts'
+import { GitService, type DiffFileMetadata } from './git.service.ts'
 import { parseDiff, parseSingleFileDiff, getDiffSummary, type DiffSummary } from './diff.service.ts'
 import type {
   Review,
@@ -19,13 +19,24 @@ import type {
   PaginatedResponse,
 } from '../../shared/types.ts'
 
-/** File metadata without hunks (for lazy loading) */
-export interface DiffFileMetadata {
-  oldPath: string;
-  newPath: string;
-  status: 'added' | 'modified' | 'deleted' | 'renamed';
-  additions: number;
-  deletions: number;
+function getDiffMetadataSummary (files: DiffFileMetadata[]): DiffSummary {
+  let totalAdditions = 0
+  let totalDeletions = 0
+
+  for (const file of files) {
+    totalAdditions += file.additions
+    totalDeletions += file.deletions
+  }
+
+  return {
+    totalFiles: files.length,
+    totalAdditions,
+    totalDeletions,
+    filesAdded: files.filter((f) => f.status === 'added').length,
+    filesModified: files.filter((f) => f.status === 'modified').length,
+    filesDeleted: files.filter((f) => f.status === 'deleted').length,
+    filesRenamed: files.filter((f) => f.status === 'renamed').length,
+  }
 }
 
 export interface ReviewWithDetails extends Omit<Review, 'snapshotData'> {
@@ -70,56 +81,103 @@ export class ReviewService {
     const sourceType = request.sourceType || 'staged'
     const sourceRef = request.sourceRef || null
 
-    let diffText: string
     let baseRef: string | null
+    let fileMetadata: DiffFileMetadata[]
+    let summary: DiffSummary
+    let fileInputs: CreateReviewFileInput[]
 
     if (sourceType === 'staged') {
       // Get staged diff
-      diffText = await this.git.getStagedDiff()
+      const diffText = await this.git.getStagedDiff()
       const hasStagedChanges = await this.git.hasStagedChanges()
 
       if (!hasStagedChanges) {
         throw new ReviewError('No staged changes to review', 'NO_STAGED_CHANGES')
       }
       baseRef = await this.git.getHeadSha()
+
+      const files = parseDiff(diffText)
+      if (files.length === 0) {
+        throw new ReviewError('No changes to review', 'NO_CHANGES')
+      }
+
+      summary = getDiffSummary(files)
+      fileMetadata = files.map((file) => ({
+        oldPath: file.oldPath,
+        newPath: file.newPath,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+      }))
+      fileInputs = files.map((file) => ({
+        id: randomUUID(),
+        reviewId: '',
+        filePath: file.newPath,
+        oldPath: file.oldPath !== file.newPath ? file.oldPath : null,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+        hunksData: ReviewFileRepository.serializeHunks(file.hunks),
+      }))
     } else if (sourceType === 'branch' && sourceRef) {
-      // Review a selected branch against the repository default branch
+      // Review a selected branch against the repository default branch without loading the full patch.
       baseRef = await this.git.getDefaultBranch()
-      diffText = await this.git.getBranchDiff(sourceRef, baseRef)
+      fileMetadata = await this.git.getBranchDiffMetadata(sourceRef, baseRef)
+
+      if (fileMetadata.length === 0) {
+        throw new ReviewError('No changes to review', 'NO_CHANGES')
+      }
+
+      summary = getDiffMetadataSummary(fileMetadata)
+      fileInputs = fileMetadata.map((file) => ({
+        id: randomUUID(),
+        reviewId: '',
+        filePath: file.newPath,
+        oldPath: file.oldPath !== file.newPath ? file.oldPath : null,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+        hunksData: null,
+      }))
     } else if (sourceType === 'commits' && sourceRef) {
       // Get diff for specific commits
       const commits = sourceRef.split(',').map(s => s.trim())
-      diffText = await this.git.getCommitsDiff(commits)
+      const diffText = await this.git.getCommitsDiff(commits)
       baseRef = commits[commits.length - 1] || null
+
+      const files = parseDiff(diffText)
+      if (files.length === 0) {
+        throw new ReviewError('No changes to review', 'NO_CHANGES')
+      }
+
+      summary = getDiffSummary(files)
+      fileMetadata = files.map((file) => ({
+        oldPath: file.oldPath,
+        newPath: file.newPath,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+      }))
+      fileInputs = fileMetadata.map((file) => ({
+        id: randomUUID(),
+        reviewId: '',
+        filePath: file.newPath,
+        oldPath: file.oldPath !== file.newPath ? file.oldPath : null,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+        hunksData: null,
+      }))
     } else {
       throw new ReviewError('Invalid source type or missing source ref', 'INVALID_SOURCE')
     }
 
-    // Parse diff and get repository info
-    const files = parseDiff(diffText)
-    const summary = getDiffSummary(files)
     const repoInfo = await this.git.getRepositoryInfo()
-
-    if (files.length === 0) {
-      throw new ReviewError('No changes to review', 'NO_CHANGES')
-    }
-
     const reviewId = randomUUID()
 
-    // For staged reviews, store hunks in review_files table
-    // For committed reviews (branch/commits), only store metadata - hunks are regenerated from git
-    const storeHunks = sourceType === 'staged'
-
-    // Create file records
-    const fileInputs: CreateReviewFileInput[] = files.map((file) => ({
-      id: randomUUID(),
+    const normalizedFileInputs: CreateReviewFileInput[] = fileInputs.map((file) => ({
+      ...file,
       reviewId,
-      filePath: file.newPath,
-      oldPath: file.oldPath !== file.newPath ? file.oldPath : null,
-      status: file.status,
-      additions: file.additions,
-      deletions: file.deletions,
-      hunksData: storeHunks ? ReviewFileRepository.serializeHunks(file.hunks) : null,
     }))
 
     // Create snapshot data (lightweight - just repository info for new reviews)
@@ -141,16 +199,7 @@ export class ReviewService {
     })
 
     // Store files in review_files table
-    this.fileRepo.createBulk(fileInputs)
-
-    // Convert files to metadata (without hunks)
-    const fileMetadata: DiffFileMetadata[] = files.map((file) => ({
-      oldPath: file.oldPath,
-      newPath: file.newPath,
-      status: file.status,
-      additions: file.additions,
-      deletions: file.deletions,
-    }))
+    this.fileRepo.createBulk(normalizedFileInputs)
 
     return {
       id: review.id,
@@ -333,23 +382,7 @@ export class ReviewService {
         deletions: rf.deletions,
       }))
 
-      // Calculate summary from file metadata
-      let totalAdditions = 0
-      let totalDeletions = 0
-      for (const file of fileMetadata) {
-        totalAdditions += file.additions
-        totalDeletions += file.deletions
-      }
-
-      summary = {
-        totalFiles: fileMetadata.length,
-        totalAdditions,
-        totalDeletions,
-        filesAdded: fileMetadata.filter((f) => f.status === 'added').length,
-        filesModified: fileMetadata.filter((f) => f.status === 'modified').length,
-        filesDeleted: fileMetadata.filter((f) => f.status === 'deleted').length,
-        filesRenamed: fileMetadata.filter((f) => f.status === 'renamed').length,
-      }
+      summary = getDiffMetadataSummary(fileMetadata)
     } else {
       // Legacy format: files embedded in snapshot_data
       const files = snapshot.files ?? []
@@ -387,22 +420,13 @@ export class ReviewService {
       // New format: get files from review_files table
       const reviewFiles = this.fileRepo.findByReview(review.id)
 
-      let totalAdditions = 0
-      let totalDeletions = 0
-      for (const file of reviewFiles) {
-        totalAdditions += file.additions
-        totalDeletions += file.deletions
-      }
-
-      summary = {
-        totalFiles: reviewFiles.length,
-        totalAdditions,
-        totalDeletions,
-        filesAdded: reviewFiles.filter((f) => f.status === 'added').length,
-        filesModified: reviewFiles.filter((f) => f.status === 'modified').length,
-        filesDeleted: reviewFiles.filter((f) => f.status === 'deleted').length,
-        filesRenamed: reviewFiles.filter((f) => f.status === 'renamed').length,
-      }
+      summary = getDiffMetadataSummary(reviewFiles.map((file) => ({
+        oldPath: file.oldPath ?? file.filePath,
+        newPath: file.filePath,
+        status: file.status,
+        additions: file.additions,
+        deletions: file.deletions,
+      })))
     } else {
       // Legacy format
       const files = snapshot.files ?? []

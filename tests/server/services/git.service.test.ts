@@ -301,6 +301,105 @@ describe('git.service', () => {
     })
   })
 
+  describe('getBranchDiffMetadata', () => {
+    it('should return file metadata without loading the full patch', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir)
+
+      const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
+
+      writeFileSync(join(tempDir, 'modified.ts'), 'const before = true\n')
+      writeFileSync(join(tempDir, 'deleted.ts'), 'delete me\n')
+      writeFileSync(join(tempDir, 'rename-me.ts'), 'rename me\n')
+      execSync('git add modified.ts deleted.ts rename-me.ts && git commit -m "Add baseline files"', { cwd: tempDir, stdio: 'ignore' })
+
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'modified.ts'), 'const before = false\nconst after = true\n')
+      execSync('git rm deleted.ts', { cwd: tempDir, stdio: 'ignore' })
+      execSync('git mv rename-me.ts renamed.ts', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'added.ts'), 'export const added = true\n')
+      execSync('git add modified.ts renamed.ts added.ts && git commit -m "Branch changes"', { cwd: tempDir, stdio: 'ignore' })
+
+      execSync(`git checkout ${mainBranch}`, { cwd: tempDir, stdio: 'ignore' })
+
+      const files = await git.getBranchDiffMetadata('feature')
+
+      assert.strictEqual(files.length, 4)
+      assert.deepStrictEqual(files.find(file => file.newPath === 'added.ts'), {
+        oldPath: 'added.ts',
+        newPath: 'added.ts',
+        status: 'added',
+        additions: 1,
+        deletions: 0,
+      })
+      assert.deepStrictEqual(files.find(file => file.newPath === 'modified.ts'), {
+        oldPath: 'modified.ts',
+        newPath: 'modified.ts',
+        status: 'modified',
+        additions: 2,
+        deletions: 1,
+      })
+      assert.deepStrictEqual(files.find(file => file.newPath === 'deleted.ts'), {
+        oldPath: 'deleted.ts',
+        newPath: 'deleted.ts',
+        status: 'deleted',
+        additions: 0,
+        deletions: 1,
+      })
+
+      const renamed = files.find(file => file.newPath === 'renamed.ts')
+      assert.deepStrictEqual(renamed, {
+        oldPath: 'rename-me.ts',
+        newPath: 'renamed.ts',
+        status: 'renamed',
+        additions: 0,
+        deletions: 0,
+      })
+    })
+  })
+
+  describe('getDefaultBranch', () => {
+    it('should prefer authoritative remote HEAD over stale origin/HEAD', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      const git = new GitService(tempDir) as any
+
+      const originalRaw = git.git.raw.bind(git.git)
+      git.git.raw = async (args: string[]) => {
+        if (args[0] === 'ls-remote') {
+          return 'ref: refs/heads/main\tHEAD\n1234567890abcdef\tHEAD\n'
+        }
+        if (args[0] === 'symbolic-ref') {
+          return 'origin/master\n'
+        }
+        return await originalRaw(args)
+      }
+
+      assert.strictEqual(await git.getDefaultBranch(), 'main')
+    })
+
+    it('should prefer main when origin/HEAD is stale and master is an ancestor of main', async (t) => {
+      const tempDir = createTestRepoWithCommit(t)
+      execSync('git checkout -b main', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'main-only.txt'), 'hello\n')
+      execSync('git add main-only.txt && git commit -m "Advance main"', { cwd: tempDir, stdio: 'ignore' })
+      execSync('git checkout master', { cwd: tempDir, stdio: 'ignore' })
+
+      const git = new GitService(tempDir) as any
+      const originalRaw = git.git.raw.bind(git.git)
+      git.git.raw = async (args: string[]) => {
+        if (args[0] === 'ls-remote') {
+          throw new Error('offline')
+        }
+        if (args[0] === 'symbolic-ref') {
+          return 'origin/master\n'
+        }
+        return await originalRaw(args)
+      }
+
+      assert.strictEqual(await git.getDefaultBranch(), 'main')
+    })
+  })
+
   describe('getBranches', () => {
     it('should return an array of branches', async (t) => {
       const tempDir = createTestRepoWithCommit(t)
