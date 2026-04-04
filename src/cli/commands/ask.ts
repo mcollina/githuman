@@ -1,24 +1,32 @@
 /**
- * Ask command - start or reuse GitHuman, wait for human review, then print feedback
+ * Ask command - create an assistant↔human handoff session and wait for completion
  */
-import { randomUUID } from 'node:crypto'
 import { parseArgs } from 'node:util'
 import open from 'open'
-import { getDatabase } from '../../server/db/index.ts'
-import { TodoRepository } from '../../server/repositories/todo.repo.ts'
-import { CommentRepository } from '../../server/repositories/comment.repo.ts'
-import { ReviewRepository } from '../../server/repositories/review.repo.ts'
-import type { Comment, Review, Todo } from '../../shared/types.ts'
-import { ensureServerRunning, extractAuthArg, getAccessUrl, resolveServerRuntime, stripAuthArg } from '../server-runtime.ts'
+import type { AskFeedback, AskSession, AskSessionDetails, Comment, CreateAskSessionRequest, Todo } from '../../shared/types.ts'
+import { ensureServerRunning, extractAuthArg, getAppUrl, resolveServerRuntime, stripAuthArg } from '../server-runtime.ts'
 
 const DEFAULT_INTERVAL_MS = 1500
 
-interface AskResult {
+interface AskResult extends AskFeedback {
   url: string;
-  requestTodo: Todo;
-  reviewStatus: Review['status'] | null;
-  todos: Todo[];
-  comments: Comment[];
+}
+
+interface ApiErrorResponse {
+  error?: string;
+  code?: string;
+}
+
+class AskCommandApiError extends Error {
+  status: number
+  code?: string
+
+  constructor (message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'AskCommandApiError'
+    this.status = status
+    this.code = code
+  }
 }
 
 function printHelp () {
@@ -57,29 +65,74 @@ Examples:
 `)
 }
 
-function buildRequestContent (message: string): string {
+function buildRequestMessage (message: string): string {
   const trimmed = message.trim()
   if (!trimmed) {
-    return 'AI review request: Please review the current changes.'
+    return 'Please review the current changes.'
   }
 
-  return `AI review request: ${trimmed}`
+  return trimmed
 }
 
-async function notifyServer (url: string, authToken: string | null) {
+function getHeaders (authToken: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`
+  }
+
+  return headers
+}
+
+async function parseResponse<T> (response: Response): Promise<T> {
+  if (!response.ok) {
+    const error = (await response.json().catch(() => ({}))) as ApiErrorResponse
+    throw new AskCommandApiError(
+      error.error ?? `HTTP ${response.status}`,
+      response.status,
+      error.code
+    )
+  }
+
+  return await response.json() as T
+}
+
+async function createAskSession (baseUrl: string, authToken: string | null, request: CreateAskSessionRequest): Promise<AskSession> {
+  const response = await fetch(new URL('/api/asks', baseUrl), {
+    method: 'POST',
+    headers: getHeaders(authToken),
+    body: JSON.stringify(request),
+  })
+
+  return await parseResponse<AskSession>(response)
+}
+
+async function getAskSession (baseUrl: string, authToken: string | null, id: string): Promise<AskSessionDetails> {
+  const response = await fetch(new URL(`/api/asks/${id}`, baseUrl), {
+    method: 'GET',
+    headers: getHeaders(authToken),
+  })
+
+  return await parseResponse<AskSessionDetails>(response)
+}
+
+async function getAskFeedback (baseUrl: string, authToken: string | null, id: string): Promise<AskFeedback> {
+  const response = await fetch(new URL(`/api/asks/${id}/feedback`, baseUrl), {
+    method: 'GET',
+    headers: getHeaders(authToken),
+  })
+
+  return await parseResponse<AskFeedback>(response)
+}
+
+async function notifyServer (baseUrl: string, authToken: string | null, type: 'asks' | 'todos' | 'reviews' | 'comments') {
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (authToken) {
-      headers.Authorization = `Bearer ${authToken}`
-    }
-
-    await fetch(new URL('/api/events/notify', url), {
+    await fetch(new URL('/api/events/notify', baseUrl), {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ type: 'todos', action: 'updated' }),
+      headers: getHeaders(authToken),
+      body: JSON.stringify({ type, action: 'updated' }),
       signal: AbortSignal.timeout(1000),
     })
   } catch {
@@ -91,13 +144,10 @@ function sleep (ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function wasTouchedDuringSession (record: { createdAt: string; updatedAt: string }, sessionStartedAt: number): boolean {
-  return Math.max(Date.parse(record.createdAt), Date.parse(record.updatedAt)) >= sessionStartedAt
-}
-
 function formatTodo (todo: Todo): string {
+  const status = todo.completed ? '[done] ' : ''
   const suffix = todo.reviewId ? ` (review ${todo.reviewId.slice(0, 8)})` : ''
-  return `- ${todo.content}${suffix}`
+  return `- ${status}${todo.content}${suffix}`
 }
 
 function formatComment (comment: Comment): string {
@@ -112,7 +162,7 @@ function formatPlainTextResult (result: AskResult): string {
   const lines = [
     'GitHuman feedback ready',
     `URL: ${result.url}`,
-    `Request todo: completed (${result.requestTodo.id.slice(0, 8)})`,
+    `Ask status: ${result.ask.status}`,
     `Review status: ${result.reviewStatus ?? 'unknown'}`,
     '',
     'Todos:',
@@ -133,18 +183,6 @@ function formatPlainTextResult (result: AskResult): string {
   }
 
   return lines.join('\n')
-}
-
-function getLatestReviewStatus (reviews: Review[], sessionStartedAt: number, reviewId?: string): Review['status'] | null {
-  if (reviewId) {
-    return reviews.find(review => review.id === reviewId)?.status ?? null
-  }
-
-  const recent = reviews
-    .filter(review => wasTouchedDuringSession(review, sessionStartedAt))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0]
-
-  return recent?.status ?? null
 }
 
 export async function askCommand (args: string[]) {
@@ -191,7 +229,7 @@ export async function askCommand (args: string[]) {
   })
 
   const server = await ensureServerRunning(runtime)
-  const url = getAccessUrl(runtime.config)
+  const baseUrl = getAppUrl(runtime.config, '/')
 
   let interrupted = false
   const onInterrupt = () => {
@@ -201,80 +239,66 @@ export async function askCommand (args: string[]) {
   process.once('SIGTERM', onInterrupt)
 
   try {
-    if (runtime.openBrowser) {
-      await open(url)
-    }
-
-    const db = getDatabase()
-    const todoRepo = new TodoRepository(db)
-    const commentRepo = new CommentRepository(db)
-    const reviewRepo = new ReviewRepository(db)
-
-    if (values.review) {
-      const review = reviewRepo.findById(values.review)
-      if (!review) {
-        console.error(`Error: Review not found: ${values.review}`)
+    let ask: AskSession
+    try {
+      ask = await createAskSession(baseUrl, runtime.config.authToken, {
+        message: buildRequestMessage(positionals.join(' ')),
+        reviewId: values.review,
+      })
+    } catch (err) {
+      if (err instanceof AskCommandApiError && err.status < 500) {
+        console.error(`Error: ${err.message}`)
         process.exitCode = 1
         return
       }
+      throw err
     }
 
-    const sessionStartedAt = Date.now()
+    const askUrl = getAppUrl(runtime.config, `/ask/${ask.id}`)
 
-    const requestTodo = todoRepo.create({
-      id: randomUUID(),
-      content: buildRequestContent(positionals.join(' ')),
-      completed: false,
-      reviewId: values.review ?? null,
-    })
+    await notifyServer(baseUrl, runtime.config.authToken, 'asks')
 
-    await notifyServer(url, runtime.config.authToken)
+    if (runtime.openBrowser) {
+      await open(askUrl)
+    }
 
     if (!values.json) {
-      console.error(`GitHuman available at: ${url}`)
-      console.error(`Waiting for human review: ${requestTodo.content}`)
-      console.error('Mark the request todo as done in GitHuman when feedback is ready.')
+      console.error(`GitHuman ask page: ${askUrl}`)
+      console.error(`Waiting for human review: ${ask.message}`)
+      console.error('The reviewer should click "Continue assistant" in the ask UI when feedback is ready.')
     }
 
     while (true) {
       if (interrupted) {
-        console.error(`\nInterrupted. GitHuman is still available at: ${url}`)
+        console.error(`\nInterrupted. GitHuman ask page is still available at: ${askUrl}`)
         process.exitCode = 1
         return
       }
 
-      const currentTodo = todoRepo.findById(requestTodo.id)
-      if (!currentTodo) {
+      let currentAsk: AskSessionDetails
+      try {
+        currentAsk = await getAskSession(baseUrl, runtime.config.authToken, ask.id)
+      } catch (err) {
+        if (err instanceof AskCommandApiError && err.status === 404) {
+          console.error('Ask session no longer exists')
+          process.exitCode = 1
+          return
+        }
+        throw err
+      }
+
+      if (currentAsk.status === 'cancelled') {
         console.error('Review request was cancelled')
         process.exitCode = 1
         return
       }
 
-      if (currentTodo.completed) {
-        const allTodos = todoRepo.findAll()
-        const filteredTodos = allTodos
-          .filter(todo => todo.id !== requestTodo.id)
-          .filter(todo => !todo.completed)
-          .filter(todo => !values.review || todo.reviewId === values.review)
-          .filter(todo => wasTouchedDuringSession(todo, sessionStartedAt))
-
-        const reviews = reviewRepo.findAll({
-          repositoryPath: runtime.config.repositoryPath,
-          pageSize: 1000,
-        }).data
-
-        const comments = (values.review
-          ? commentRepo.findByReview(values.review)
-          : reviews.flatMap(review => commentRepo.findByReview(review.id)))
-          .filter(comment => wasTouchedDuringSession(comment, sessionStartedAt))
-          .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+      if (currentAsk.status === 'ready_for_agent') {
+        const feedback = await getAskFeedback(baseUrl, runtime.config.authToken, currentAsk.id)
 
         const result: AskResult = {
-          url,
-          requestTodo: currentTodo,
-          reviewStatus: getLatestReviewStatus(reviews, sessionStartedAt, values.review),
-          todos: filteredTodos,
-          comments,
+          ...feedback,
+          url: askUrl,
         }
 
         if (values.json) {
@@ -294,4 +318,4 @@ export async function askCommand (args: string[]) {
   }
 }
 
-export { buildRequestContent }
+export { buildRequestMessage }

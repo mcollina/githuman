@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Header } from './Header'
+import { AskSessionDock } from './AskSessionDock'
 import { TodoDrawer } from '../todos'
 import { LoginForm } from '../auth'
 import { useRepositoryInfo } from '../../hooks/useRepositoryInfo'
@@ -38,6 +39,7 @@ export function Layout () {
       <main className='flex-1 flex min-w-0 overflow-hidden'>
         <Outlet />
       </main>
+      <AskSessionDock />
       <TodoDrawer isOpen={todosOpen} onClose={handleCloseTodos} />
     </div>
   )

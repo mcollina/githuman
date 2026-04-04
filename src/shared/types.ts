@@ -16,6 +16,7 @@ export interface Review {
 
 export type ReviewStatus = 'in_progress' | 'approved' | 'changes_requested'
 export type ReviewSourceType = 'staged' | 'branch' | 'commits'
+export type AskStatus = 'waiting_for_human' | 'ready_for_agent' | 'cancelled'
 
 export interface Comment {
   id: string;
@@ -38,6 +39,43 @@ export interface Todo {
   position: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AskSession {
+  id: string;
+  repositoryPath: string;
+  reviewId: string | null;
+  message: string;
+  status: AskStatus;
+  assistantContext: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+
+export interface AskSessionReviewContext {
+  id: string;
+  sourceType: ReviewSourceType;
+  sourceRef: string | null;
+  baseRef: string | null;
+  status: ReviewStatus;
+}
+
+export interface AskSessionDetails extends AskSession {
+  review: AskSessionReviewContext | null;
+  feedback: {
+    reviewStatus: ReviewStatus | null;
+    todoCount: number;
+    commentCount: number;
+    unresolvedCommentCount: number;
+  };
+}
+
+export interface AskFeedback {
+  ask: AskSession;
+  reviewStatus: ReviewStatus | null;
+  todos: Todo[];
+  comments: Comment[];
 }
 
 export interface DiffFile {
@@ -112,6 +150,16 @@ export interface CreateTodoRequest {
 export interface UpdateTodoRequest {
   content?: string;
   completed?: boolean;
+}
+
+export interface CreateAskSessionRequest {
+  message: string;
+  reviewId?: string;
+  assistantContext?: string;
+}
+
+export interface UpdateAskSessionRequest {
+  status?: AskStatus;
 }
 
 export interface ApiError {

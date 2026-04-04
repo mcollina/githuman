@@ -9,6 +9,7 @@ import { initDatabase, closeDatabase, getDatabase } from '../../src/server/db/in
 import { buildApp } from '../../src/server/app.ts'
 import { createConfig } from '../../src/server/config.ts'
 import { ReviewRepository } from '../../src/server/repositories/review.repo.ts'
+import { AskSessionRepository } from '../../src/server/repositories/ask-session.repo.ts'
 import { TodoRepository } from '../../src/server/repositories/todo.repo.ts'
 import { CommentRepository } from '../../src/server/repositories/comment.repo.ts'
 
@@ -55,27 +56,28 @@ function createReview (repoDir: string): string {
   return reviewId
 }
 
-async function waitForRequestTodo (repoDir: string, content: string): Promise<{ id: string; content: string }> {
+async function waitForAskSession (repoDir: string, message: string): Promise<{ id: string; message: string }> {
   const deadline = Date.now() + 10000
 
   while (Date.now() < deadline) {
     const db = openTestDatabase(repoDir)
-    const todoRepo = new TodoRepository(db)
-    const todo = todoRepo.findAll().find(item => item.content === content)
+    const stmt = db.prepare('SELECT * FROM ask_sessions WHERE message = ? ORDER BY created_at DESC LIMIT 1')
+    const row = stmt.get(message) as { id: string; message: string } | undefined
     db.close()
 
-    if (todo) {
-      return { id: todo.id, content: todo.content }
+    if (row) {
+      return row
     }
 
     await new Promise(resolve => setTimeout(resolve, 50))
   }
 
-  throw new Error('Timed out waiting for ask request todo')
+  throw new Error('Timed out waiting for ask session')
 }
 
-async function completeAskSession (repoDir: string, reviewId: string, requestTodoId: string) {
+async function completeAskSession (repoDir: string, reviewId: string, askId: string) {
   const db = openTestDatabase(repoDir)
+  const askRepo = new AskSessionRepository(db)
   const todoRepo = new TodoRepository(db)
   const commentRepo = new CommentRepository(db)
   const reviewRepo = new ReviewRepository(db)
@@ -102,7 +104,10 @@ async function completeAskSession (repoDir: string, reviewId: string, requestTod
     status: 'changes_requested',
   })
 
-  todoRepo.update(requestTodoId, { completed: true })
+  askRepo.update(askId, {
+    status: 'ready_for_agent',
+    completedAt: new Date().toISOString(),
+  })
   db.close()
 }
 
@@ -157,11 +162,11 @@ async function runAsk (args: string[], cwd: string): Promise<ExecResult> {
 }
 
 describe('githuman ask', { concurrency: 1 }, () => {
-  it('waits for the human to finish and prints plain-text feedback', async (t) => {
+  it('waits for the human to continue the assistant and prints plain-text feedback', async (t) => {
     const repoDir = await createTestRepoWithDb(t)
     const reviewId = createReview(repoDir)
     const port = 45000 + Math.floor(Math.random() * 1000)
-    const requestContent = 'AI review request: Please review the parser refactor'
+    const askMessage = 'Please review the parser refactor'
     const server = await startAskServer(repoDir, port)
 
     try {
@@ -170,17 +175,19 @@ describe('githuman ask', { concurrency: 1 }, () => {
         '--no-open',
         '--interval', '50',
         '--port', String(port),
-        'Please review the parser refactor',
+        askMessage,
       ], repoDir)
 
-      const requestTodo = await waitForRequestTodo(repoDir, requestContent)
-      await completeAskSession(repoDir, reviewId, requestTodo.id)
+      const ask = await waitForAskSession(repoDir, askMessage)
+      await completeAskSession(repoDir, reviewId, ask.id)
 
       const result = await askPromise
 
       assert.strictEqual(result.exitCode, 0, `${result.stderr}\n${result.stdout}`)
-      assert.ok(result.stderr.includes('GitHuman available at: http://localhost:'))
+      assert.ok(result.stderr.includes('GitHuman ask page: http://localhost:'))
+      assert.ok(result.stderr.includes('Continue assistant'))
       assert.ok(result.stdout.includes('GitHuman feedback ready'))
+      assert.ok(result.stdout.includes('Ask status: ready_for_agent'))
       assert.ok(result.stdout.includes('Review status: changes_requested'))
       assert.ok(result.stdout.includes('Add a regression test for whitespace-only input'))
       assert.ok(result.stdout.includes('src/parser.ts:42'))
@@ -194,7 +201,7 @@ describe('githuman ask', { concurrency: 1 }, () => {
     const repoDir = await createTestRepoWithDb(t)
     const reviewId = createReview(repoDir)
     const port = 46000 + Math.floor(Math.random() * 1000)
-    const requestContent = 'AI review request: Please review the current changes.'
+    const askMessage = 'Please review the current changes.'
     const server = await startAskServer(repoDir, port)
 
     try {
@@ -206,16 +213,17 @@ describe('githuman ask', { concurrency: 1 }, () => {
         '--json',
       ], repoDir)
 
-      const requestTodo = await waitForRequestTodo(repoDir, requestContent)
-      await completeAskSession(repoDir, reviewId, requestTodo.id)
+      const ask = await waitForAskSession(repoDir, askMessage)
+      await completeAskSession(repoDir, reviewId, ask.id)
 
       const result = await askPromise
       assert.strictEqual(result.exitCode, 0, `${result.stderr}\n${result.stdout}`)
 
       const data = JSON.parse(result.stdout)
       assert.ok(data.url.startsWith('http://localhost:'))
+      assert.strictEqual(data.ask.status, 'ready_for_agent')
+      assert.strictEqual(data.ask.message, askMessage)
       assert.strictEqual(data.reviewStatus, 'changes_requested')
-      assert.strictEqual(data.requestTodo.content, requestContent)
       assert.strictEqual(data.todos.length, 1)
       assert.strictEqual(data.comments.length, 1)
       assert.strictEqual(data.todos[0].content, 'Add a regression test for whitespace-only input')

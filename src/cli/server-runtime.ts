@@ -31,16 +31,21 @@ function getConnectHost (host: string): string {
   return host
 }
 
-export function getAccessUrl (config: ServerConfig): string {
+export function getAppUrl (config: ServerConfig, pathname = '/'): string {
   const protocol = config.https ? 'https' : 'http'
   const host = getConnectHost(config.host)
-  const base = `${protocol}://${host}:${config.port}`
+  const url = new URL(`${protocol}://${host}:${config.port}`)
+  url.pathname = pathname
 
-  if (!config.authToken) {
-    return base
+  if (config.authToken) {
+    url.searchParams.set('token', config.authToken)
   }
 
-  return `${base}?token=${encodeURIComponent(config.authToken)}`
+  return url.toString()
+}
+
+export function getAccessUrl (config: ServerConfig): string {
+  return getAppUrl(config, '/')
 }
 
 async function healthCheck (config: ServerConfig): Promise<boolean> {

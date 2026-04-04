@@ -75,9 +75,9 @@ This opens a web interface at `http://localhost:3847` where you can review your 
 githuman ask "Please review the parser refactor"
 ```
 
-`githuman ask` starts or reuses GitHuman, prints the review URL, optionally opens the browser, waits for the human to mark the request todo as done, and then prints the new todos, comments, and review status updates for the agent.
+`githuman ask` starts or reuses GitHuman, opens a dedicated ask page, waits for the human to finish reviewing, and then prints the new todos, comments, and review status updates for the agent.
 
-In v1, the completion signal is simple and explicit: the human finishes their turn by marking the ask todo as done in the UI.
+The handoff is completed in the UI with a dedicated **Continue assistant** button.
 
 ## Agent Skills
 
@@ -190,7 +190,7 @@ Options:
 1. **The agent runs `githuman ask`**
 2. **GitHuman starts or reconnects** and prints the review URL
 3. **The human reviews in the browser** and leaves comments or todos
-4. **The human marks the ask todo as done** when feedback is ready
+4. **The human clicks `Continue assistant`** when feedback is ready
 5. **`githuman ask` exits with the new feedback** so the agent can continue
 
 ## Web Interface
