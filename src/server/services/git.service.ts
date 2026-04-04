@@ -486,24 +486,56 @@ export class GitService {
   }
 
   /**
-   * Get diff between current branch and another branch
-   * Shows what's in HEAD that's not in targetBranch (for code review)
+   * Get the default branch for the repository.
+   * Prefers origin/HEAD when available, then falls back to main/master.
    */
-  async getBranchDiff (targetBranch: string): Promise<string> {
-    // Get diff from target branch to HEAD (shows what's in HEAD, not in target branch)
-    const diff = await this.git.diff([`${targetBranch}...HEAD`])
+  async getDefaultBranch (): Promise<string> {
+    try {
+      const remoteHead = await this.git.raw(['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'])
+      const branch = remoteHead.trim().replace(/^origin\//, '')
+      if (branch) {
+        return branch
+      }
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'getDefaultBranch remote HEAD lookup failed')
+    }
+
+    try {
+      const branches = await this.getBranches()
+      if (branches.some(branch => branch.name === 'main')) {
+        return 'main'
+      }
+      if (branches.some(branch => branch.name === 'master')) {
+        return 'master'
+      }
+    } catch (err) {
+      this.log?.debug({ err, repoPath: this.repoPath }, 'getDefaultBranch branch lookup failed')
+    }
+
+    return await this.getCurrentBranch() ?? 'main'
+  }
+
+  /**
+   * Get diff for a branch review.
+   * Shows what's in branchToReview that's not in the base branch.
+   */
+  async getBranchDiff (branchToReview: string, baseBranch?: string): Promise<string> {
+    const resolvedBaseBranch = baseBranch ?? await this.getDefaultBranch()
+    const diff = await this.git.diff([`${resolvedBaseBranch}...${branchToReview}`])
     return diff
   }
 
   /**
-   * Get diff for a specific file between current branch and another branch
+   * Get diff for a specific file in a branch review.
    */
-  async getBranchFileDiff (targetBranch: string, filePath: string): Promise<string> {
+  async getBranchFileDiff (branchToReview: string, filePath: string, baseBranch?: string): Promise<string> {
+    const resolvedBaseBranch = baseBranch ?? await this.getDefaultBranch()
+
     try {
-      const diff = await this.git.diff([`${targetBranch}...HEAD`, '--', filePath])
+      const diff = await this.git.diff([`${resolvedBaseBranch}...${branchToReview}`, '--', filePath])
       return diff
     } catch (err) {
-      this.log?.debug({ err, targetBranch, filePath }, 'getBranchFileDiff failed')
+      this.log?.debug({ err, branchToReview, filePath, baseBranch: resolvedBaseBranch }, 'getBranchFileDiff failed')
       return ''
     }
   }

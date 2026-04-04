@@ -255,11 +255,10 @@ describe('git.service', () => {
   })
 
   describe('getBranchFileDiff', () => {
-    it('should return diff for a specific file between branches', async (t) => {
+    it('should return diff for a specific file in a selected branch against main', async (t) => {
       const tempDir = createTestRepoWithCommit(t)
       const testGit = new GitService(tempDir)
 
-      // Get the main branch name
       const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
 
       // Create a feature branch with changes
@@ -267,8 +266,10 @@ describe('git.service', () => {
       writeFileSync(join(tempDir, 'feature.ts'), 'const y = 1;\n')
       execSync('git add feature.ts && git commit -m "Add feature.ts"', { cwd: tempDir, stdio: 'ignore' })
 
-      // Stay on feature branch and compare against main (shows what's in feature, not in main)
-      const diff = await testGit.getBranchFileDiff(mainBranch, 'feature.ts')
+      // Go back to main and diff the feature branch without checking it out
+      execSync(`git checkout ${mainBranch}`, { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getBranchFileDiff('feature', 'feature.ts')
       assert.ok(diff.includes('feature.ts'))
       assert.ok(diff.includes('+const y = 1;'))
     })
@@ -277,7 +278,6 @@ describe('git.service', () => {
       const tempDir = createTestRepoWithCommit(t)
       const testGit = new GitService(tempDir)
 
-      // Get the main branch name
       const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
 
       // Create a feature branch with changes to a different file
@@ -285,8 +285,10 @@ describe('git.service', () => {
       writeFileSync(join(tempDir, 'other.ts'), 'const z = 1;\n')
       execSync('git add other.ts && git commit -m "Add other.ts"', { cwd: tempDir, stdio: 'ignore' })
 
-      // Stay on feature branch, request diff for a file that wasn't changed
-      const diff = await testGit.getBranchFileDiff(mainBranch, 'README.md')
+      // Go back to main and request diff for a file that wasn't changed
+      execSync(`git checkout ${mainBranch}`, { cwd: tempDir, stdio: 'ignore' })
+
+      const diff = await testGit.getBranchFileDiff('feature', 'README.md')
       assert.strictEqual(diff.trim(), '')
     })
 

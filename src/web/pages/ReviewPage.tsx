@@ -242,7 +242,7 @@ export function ReviewPage () {
                   </span>
                   {data.baseRef && (
                     <span className='font-mono text-xs text-[var(--gh-text-muted)] bg-[var(--gh-bg-elevated)] px-2 py-0.5 rounded'>
-                      {data.baseRef.slice(0, 8)}
+                      {data.sourceType === 'branch' ? `against ${data.baseRef}` : data.baseRef.slice(0, 8)}
                     </span>
                   )}
                 </div>

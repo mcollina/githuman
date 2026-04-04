@@ -108,26 +108,47 @@ describe('ReviewService', () => {
       const tempDir = createTestRepo(t)
       const service = new ReviewService(db, tempDir)
 
-      // Get the main branch name
-      const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
-
       // Create a feature branch with changes
       execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
       writeFileSync(join(tempDir, 'branch-file.ts'), 'const z = 3;\n')
       execSync('git add branch-file.ts && git commit -m "Add branch file"', { cwd: tempDir, stdio: 'ignore' })
 
-      // Stay on feature branch and compare against main (shows what's in feature, not in main)
-      const review = await service.create({ sourceType: 'branch', sourceRef: mainBranch })
+      // Review the feature branch against main/default branch
+      const review = await service.create({ sourceType: 'branch', sourceRef: 'feature' })
 
       // Verify review was created
       assert.ok(review.id)
       assert.strictEqual(review.sourceType, 'branch')
+      assert.strictEqual(review.sourceRef, 'feature')
       assert.strictEqual(review.files.length, 1)
 
       // Verify hunks are NOT stored for branch review
       const file = fileRepo.findByReviewAndPath(review.id, 'branch-file.ts')
       assert.ok(file)
       assert.strictEqual(file.hunksData, null, 'Hunks should NOT be stored for branch review')
+    })
+
+    it('should create a branch review for a selected branch against main', async (t) => {
+      const tempDir = createTestRepo(t)
+      const service = new ReviewService(db, tempDir)
+
+      const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
+
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'selected-branch.ts'), 'export const selectedBranch = true\n')
+      execSync('git add selected-branch.ts && git commit -m "Add branch-only file"', { cwd: tempDir, stdio: 'ignore' })
+
+      // Go back to main and review the feature branch without checking it out
+      execSync(`git checkout ${mainBranch}`, { cwd: tempDir, stdio: 'ignore' })
+
+      const review = await service.create({ sourceType: 'branch', sourceRef: 'feature' })
+
+      assert.strictEqual(review.sourceType, 'branch')
+      assert.strictEqual(review.sourceRef, 'feature')
+      assert.strictEqual(review.baseRef, mainBranch)
+      assert.strictEqual(review.files.length, 1)
+      assert.strictEqual(review.files[0].newPath, 'selected-branch.ts')
+      assert.strictEqual(review.files[0].status, 'added')
     })
 
     it('should throw error when no staged changes', async (t) => {
@@ -221,16 +242,13 @@ describe('ReviewService', () => {
       const tempDir = createTestRepo(t)
       const service = new ReviewService(db, tempDir)
 
-      // Get the main branch name
-      const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: tempDir }).toString().trim()
-
       // Create a feature branch with changes
       execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
       writeFileSync(join(tempDir, 'branch-file.ts'), 'const z = 3;\n')
       execSync('git add branch-file.ts && git commit -m "Add branch file"', { cwd: tempDir, stdio: 'ignore' })
 
-      // Stay on feature branch and compare against main (shows what's in feature, not in main)
-      const review = await service.create({ sourceType: 'branch', sourceRef: mainBranch })
+      // Review the feature branch against main/default branch
+      const review = await service.create({ sourceType: 'branch', sourceRef: 'feature' })
 
       // Hunks should be regenerated from git
       const hunks = await service.getFileHunks(review.id, 'branch-file.ts')

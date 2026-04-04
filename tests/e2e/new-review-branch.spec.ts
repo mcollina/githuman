@@ -8,7 +8,7 @@ import { TEST_REPO_PATH, uid } from './test-helpers.ts'
 const TEST_BRANCH = `test-branch-${uid()}`
 const TEST_FILE = join(TEST_REPO_PATH, 'test-file-for-branch-review.ts')
 
-test.describe('New Review - Branch Comparison', () => {
+test.describe('New Review - Branch Against Main', () => {
   let originalBranch: string
 
   // Setup: Create a test branch with changes
@@ -92,24 +92,26 @@ test.describe('New Review - Branch Comparison', () => {
     await expect(page.getByText(`Branch: ${TEST_BRANCH}`)).toBeVisible()
   })
 
-  test('should exclude current branch from dropdown', async ({ page }) => {
-    await page.goto('/new')
+  test('should keep the branch being reviewed selectable even when it is current', async ({ page }) => {
+    // Switch to the branch we want to review so it becomes the current branch
+    execSync(`git checkout ${TEST_BRANCH}`, { cwd: TEST_REPO_PATH, stdio: 'ignore' })
 
-    // Wait for page to load
-    await expect(page.locator('h1')).toContainText('Create New Review')
+    try {
+      await page.goto('/new')
 
-    // Click on "Branch Comparison" option
-    await page.locator('button').filter({ hasText: 'Branch Comparison' }).click()
+      // Wait for page to load
+      await expect(page.locator('h1')).toContainText('Create New Review')
 
-    // Verify current branch is not in dropdown
-    const branchSelect = page.locator('select')
-    const options = await branchSelect.locator('option').allTextContents()
+      // Click on "Branch Comparison" option
+      await page.locator('button').filter({ hasText: 'Branch Comparison' }).click()
 
-    // Current branch should not be an option (it's filtered out)
-    const currentBranchInOptions = options.some(opt => opt.includes(originalBranch) && !opt.includes('(remote)'))
+      const branchSelect = page.locator('select')
+      const options = await branchSelect.locator('option').allTextContents()
 
-    // Note: The current branch should be filtered out from the dropdown
-    // This test verifies that behavior
-    expect(currentBranchInOptions).toBeFalsy()
+      expect(options.some(opt => opt.includes(TEST_BRANCH) && !opt.includes('(remote)'))).toBeTruthy()
+      expect(options.some(opt => opt.includes(originalBranch) && !opt.includes('(remote)'))).toBeFalsy()
+    } finally {
+      execSync(`git checkout ${originalBranch}`, { cwd: TEST_REPO_PATH, stdio: 'ignore' })
+    }
   })
 })

@@ -83,9 +83,9 @@ export class ReviewService {
       }
       baseRef = await this.git.getHeadSha()
     } else if (sourceType === 'branch' && sourceRef) {
-      // Compare branches
-      diffText = await this.git.getBranchDiff(sourceRef)
-      baseRef = await this.git.getHeadSha()
+      // Review a selected branch against the repository default branch
+      baseRef = await this.git.getDefaultBranch()
+      diffText = await this.git.getBranchDiff(sourceRef, baseRef)
     } else if (sourceType === 'commits' && sourceRef) {
       // Get diff for specific commits
       const commits = sourceRef.split(',').map(s => s.trim())
@@ -204,7 +204,7 @@ export class ReviewService {
     // For committed reviews (branch/commits) or legacy reviews without stored hunks,
     // regenerate from git
     if (review.sourceType === 'branch' && review.sourceRef) {
-      const diffText = await this.git.getBranchFileDiff(review.sourceRef, filePath)
+      const diffText = await this.git.getBranchFileDiff(review.sourceRef, filePath, review.baseRef ?? undefined)
       const file = parseSingleFileDiff(diffText)
       return file?.hunks ?? []
     }

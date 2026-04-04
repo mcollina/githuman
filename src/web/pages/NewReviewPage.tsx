@@ -8,6 +8,10 @@ type ReviewSource = 'staged' | 'branch' | 'commits'
 
 const COMMITS_PAGE_SIZE = 20
 
+function isDefaultBranchName (branchName: string): boolean {
+  return branchName === 'main' || branchName === 'master'
+}
+
 export function NewReviewPage () {
   const navigate = useNavigate()
   const { create, loading: creating } = useCreateReview()
@@ -74,10 +78,15 @@ export function NewReviewPage () {
         // Default to staged if there are staged changes, otherwise branch
         if (!staged.hasStagedChanges && branchList.length > 0) {
           setSource('branch')
-          // Select first non-current branch
-          const nonCurrent = branchList.find(b => !b.isCurrent)
-          if (nonCurrent) {
-            setSelectedBranch(nonCurrent.name)
+
+          const reviewableBranches = branchList.filter(branch => !isDefaultBranchName(branch.name))
+          const currentReviewableBranch = reviewableBranches.find(branch => branch.isCurrent)
+          const fallbackBranch = reviewableBranches[0]
+
+          if (currentReviewableBranch) {
+            setSelectedBranch(currentReviewableBranch.name)
+          } else if (fallbackBranch) {
+            setSelectedBranch(fallbackBranch.name)
           }
         }
       } catch (err) {
@@ -219,7 +228,7 @@ export function NewReviewPage () {
             <div className='flex-1'>
               <div className='font-semibold text-[var(--gh-text-primary)]'>Branch Comparison</div>
               <div className='text-sm text-[var(--gh-text-secondary)] mt-1'>
-                Compare current branch against another branch
+                Review a branch against the default branch
               </div>
             </div>
           </button>
@@ -252,7 +261,7 @@ export function NewReviewPage () {
         {source === 'branch' && (
           <div className='mt-6 gh-card p-4'>
             <label className='block text-sm font-semibold text-[var(--gh-text-primary)] mb-2'>
-              Compare against branch
+              Select branch to review
             </label>
             <select
               value={selectedBranch}
@@ -260,14 +269,14 @@ export function NewReviewPage () {
               className='gh-input w-full'
             >
               <option value=''>Select a branch...</option>
-              {branches.filter(b => !b.isCurrent).map((branch) => (
+              {branches.filter(branch => !isDefaultBranchName(branch.name)).map((branch) => (
                 <option key={branch.name} value={branch.name}>
                   {branch.name} {branch.isRemote && '(remote)'}
                 </option>
               ))}
             </select>
             <p className='text-xs text-[var(--gh-text-muted)] mt-2'>
-              Shows changes in current branch that are not in the selected branch
+              Shows changes in the selected branch that are not in the default branch
             </p>
           </div>
         )}

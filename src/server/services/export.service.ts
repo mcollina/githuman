@@ -139,7 +139,7 @@ export class ExportService {
     // For branch reviews, show both branches explicitly
     if (review.sourceType === 'branch' && review.sourceRef) {
       lines.push(`| Source Branch | ${review.sourceRef} |`)
-      lines.push(`| Target Branch | ${repository.branch} |`)
+      lines.push(`| Target Branch | ${review.baseRef ?? repository.branch} |`)
     } else {
       lines.push(`| Branch | ${repository.branch} |`)
       lines.push(`| Source | ${sourceLabel} |`)

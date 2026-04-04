@@ -256,7 +256,7 @@ describe('ExportService', () => {
         ],
         repository: {
           name: 'test-repo',
-          branch: 'main',
+          branch: 'feature/api',
           remote: 'https://github.com/test/repo',
           path: '/path/to/repo',
         },
@@ -265,7 +265,7 @@ describe('ExportService', () => {
       const branchReview = reviewRepo.create({
         id: 'branch-review-1',
         repositoryPath: '/path/to/repo',
-        baseRef: 'def456abc789',
+        baseRef: 'main',
         sourceType: 'branch',
         sourceRef: 'feature/api',
         snapshotData: branchSnapshotData,
@@ -277,7 +277,7 @@ describe('ExportService', () => {
       assert.ok(markdown)
       assert.ok(markdown.includes('| Source Branch | feature/api |'), 'Should show Source Branch')
       assert.ok(markdown.includes('| Target Branch | main |'), 'Should show Target Branch')
-      assert.ok(!markdown.includes('| Branch | main |'), 'Should NOT show generic Branch field')
+      assert.ok(!markdown.includes('| Branch | feature/api |'), 'Should NOT show generic Branch field')
       assert.ok(!markdown.includes('| Source | Branch: feature/api |'), 'Should NOT show Source with Branch: prefix')
     })
 
