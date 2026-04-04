@@ -102,6 +102,7 @@ const CreateReviewSchema = Type.Object(
   {
     sourceType: Type.Optional(ReviewSourceTypeSchema),
     sourceRef: Type.Optional(Type.String({ description: 'Branch name or commit SHAs' })),
+    baseRef: Type.Optional(Type.String({ description: 'Target branch for branch reviews' })),
   },
   { description: 'Create review request' }
 )

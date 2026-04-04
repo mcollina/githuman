@@ -84,6 +84,7 @@ export interface RepositoryInfo {
 export interface CreateReviewRequest {
   sourceType?: ReviewSourceType;
   sourceRef?: string; // branch name or commit SHAs
+  baseRef?: string; // optional target branch for branch reviews
 }
 
 export interface UpdateReviewRequest {

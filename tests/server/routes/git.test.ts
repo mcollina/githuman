@@ -101,6 +101,22 @@ describe('git routes', () => {
     })
   })
 
+  describe('GET /api/git/default-branch', () => {
+    it('should return the default branch', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/git/default-branch',
+        headers: authHeader(),
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+
+      const body = JSON.parse(response.body)
+      assert.strictEqual(typeof body.defaultBranch, 'string')
+      assert.ok(body.defaultBranch.length > 0)
+    })
+  })
+
   describe('GET /api/git/commits', () => {
     it('should return paginated commits response', async () => {
       const response = await app.inject({

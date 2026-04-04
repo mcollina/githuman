@@ -151,6 +151,33 @@ describe('ReviewService', () => {
       assert.strictEqual(review.files[0].status, 'added')
     })
 
+    it('should create a branch review against a selected base branch', async (t) => {
+      const tempDir = createTestRepo(t)
+      const service = new ReviewService(db, tempDir)
+
+      execSync('git checkout -b release', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'release-only.ts'), 'export const releaseOnly = true\n')
+      execSync('git add release-only.ts && git commit -m "Release branch change"', { cwd: tempDir, stdio: 'ignore' })
+
+      execSync('git checkout master', { cwd: tempDir, stdio: 'ignore' })
+      execSync('git checkout -b feature', { cwd: tempDir, stdio: 'ignore' })
+      writeFileSync(join(tempDir, 'feature-only.ts'), 'export const featureOnly = true\n')
+      execSync('git add feature-only.ts && git commit -m "Feature branch change"', { cwd: tempDir, stdio: 'ignore' })
+
+      execSync('git checkout master', { cwd: tempDir, stdio: 'ignore' })
+
+      const review = await service.create({
+        sourceType: 'branch',
+        sourceRef: 'feature',
+        baseRef: 'release',
+      })
+
+      assert.strictEqual(review.baseRef, 'release')
+      assert.strictEqual(review.sourceRef, 'feature')
+      assert.strictEqual(review.files.length, 1)
+      assert.strictEqual(review.files[0].newPath, 'feature-only.ts')
+    })
+
     it('should create a branch review from metadata without loading the full patch', async (t) => {
       const tempDir = createTestRepo(t)
       const service = new ReviewService(db, tempDir)
@@ -178,9 +205,13 @@ describe('ReviewService', () => {
         path: tempDir,
       })
 
-      const review = await service.create({ sourceType: 'branch', sourceRef: 'feature' })
+      const review = await service.create({
+        sourceType: 'branch',
+        sourceRef: 'feature',
+        baseRef: 'release',
+      })
 
-      assert.strictEqual(review.baseRef, 'main')
+      assert.strictEqual(review.baseRef, 'release')
       assert.strictEqual(review.files.length, 1)
       assert.strictEqual(review.summary.totalAdditions, 1200)
       assert.strictEqual(review.summary.totalDeletions, 300)

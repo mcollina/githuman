@@ -24,6 +24,13 @@ const BranchInfoSchema = Type.Object(
   { description: 'Branch information' }
 )
 
+const DefaultBranchSchema = Type.Object(
+  {
+    defaultBranch: Type.String({ description: 'Default target branch for comparisons' }),
+  },
+  { description: 'Default branch response' }
+)
+
 const CommitInfoSchema = Type.Object(
   {
     sha: Type.String({ description: 'Commit hash' }),
@@ -183,6 +190,25 @@ const gitRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   }, async () => {
     const service = getService()
     return service.getBranches()
+  })
+
+  /**
+   * GET /api/git/default-branch
+   * Get the default branch used for branch comparisons
+   */
+  fastify.get('/api/git/default-branch', {
+    schema: {
+      tags: ['git'],
+      summary: 'Get default branch',
+      description: 'Get the default branch used as the default comparison target',
+      response: {
+        200: DefaultBranchSchema,
+      },
+    },
+  }, async () => {
+    const service = getService()
+    const defaultBranch = await service.getDefaultBranch()
+    return { defaultBranch }
   })
 
   /**

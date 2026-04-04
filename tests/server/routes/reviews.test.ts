@@ -137,6 +137,37 @@ describe('review routes', () => {
       const body = JSON.parse(response.body)
       assert.strictEqual(body.code, 'NO_STAGED_CHANGES')
     })
+
+    it('should allow specifying a base branch for branch reviews', async () => {
+      execSync('git checkout -b release', { cwd: testRepoDir, stdio: 'ignore' })
+      fs.writeFileSync(path.join(testRepoDir, 'release-only.ts'), 'export const releaseOnly = true\n')
+      execSync('git add release-only.ts && git commit -m "Release branch change"', { cwd: testRepoDir, stdio: 'ignore' })
+
+      execSync('git checkout master', { cwd: testRepoDir, stdio: 'ignore' })
+      execSync('git checkout -b feature', { cwd: testRepoDir, stdio: 'ignore' })
+      fs.writeFileSync(path.join(testRepoDir, 'feature-only.ts'), 'export const featureOnly = true\n')
+      execSync('git add feature-only.ts && git commit -m "Feature branch change"', { cwd: testRepoDir, stdio: 'ignore' })
+
+      execSync('git checkout master', { cwd: testRepoDir, stdio: 'ignore' })
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/reviews',
+        headers: authHeader(),
+        payload: {
+          sourceType: 'branch',
+          sourceRef: 'feature',
+          baseRef: 'release',
+        },
+      })
+
+      assert.strictEqual(response.statusCode, 201)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.sourceRef, 'feature')
+      assert.strictEqual(body.baseRef, 'release')
+      assert.strictEqual(body.files.length, 1)
+      assert.strictEqual(body.files[0].newPath, 'feature-only.ts')
+    })
   })
 
   describe('GET /api/reviews/:id', () => {

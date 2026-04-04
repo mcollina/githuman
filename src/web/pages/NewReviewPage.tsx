@@ -8,8 +8,8 @@ type ReviewSource = 'staged' | 'branch' | 'commits'
 
 const COMMITS_PAGE_SIZE = 20
 
-function isDefaultBranchName (branchName: string): boolean {
-  return branchName === 'main' || branchName === 'master'
+function getFirstDifferentBranch (branches: BranchInfo[], excludedBranch?: string): string {
+  return branches.find(branch => branch.name !== excludedBranch)?.name ?? ''
 }
 
 export function NewReviewPage () {
@@ -20,6 +20,8 @@ export function NewReviewPage () {
   const [branches, setBranches] = useState<BranchInfo[]>([])
   const [commits, setCommits] = useState<CommitInfo[]>([])
   const [selectedBranch, setSelectedBranch] = useState<string>('')
+  const [selectedBaseBranch, setSelectedBaseBranch] = useState<string>('')
+  const [defaultBranch, setDefaultBranch] = useState<string>('')
   const [selectedCommits, setSelectedCommits] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -65,13 +67,16 @@ export function NewReviewPage () {
     async function loadData () {
       try {
         setLoading(true)
-        const [staged, branchList, commitsResult] = await Promise.all([
+        const [staged, branchList, defaultBranchResult, commitsResult] = await Promise.all([
           gitApi.hasStagedChanges(),
           gitApi.getBranches(),
+          gitApi.getDefaultBranch(),
           gitApi.getCommits({ limit: COMMITS_PAGE_SIZE }),
         ])
         setHasStagedChanges(staged.hasStagedChanges)
         setBranches(branchList)
+        setDefaultBranch(defaultBranchResult.defaultBranch)
+        setSelectedBaseBranch(defaultBranchResult.defaultBranch)
         setCommits(commitsResult.commits)
         setHasMoreCommits(commitsResult.hasMore)
 
@@ -79,15 +84,13 @@ export function NewReviewPage () {
         if (!staged.hasStagedChanges && branchList.length > 0) {
           setSource('branch')
 
-          const reviewableBranches = branchList.filter(branch => !isDefaultBranchName(branch.name))
-          const currentReviewableBranch = reviewableBranches.find(branch => branch.isCurrent)
-          const fallbackBranch = reviewableBranches[0]
+          const currentBranch = branchList.find(branch => branch.isCurrent)?.name ?? ''
+          const fallbackBranch = getFirstDifferentBranch(branchList, defaultBranchResult.defaultBranch)
+          const initialSourceBranch = currentBranch && currentBranch !== defaultBranchResult.defaultBranch
+            ? currentBranch
+            : fallbackBranch
 
-          if (currentReviewableBranch) {
-            setSelectedBranch(currentReviewableBranch.name)
-          } else if (fallbackBranch) {
-            setSelectedBranch(fallbackBranch.name)
-          }
+          setSelectedBranch(initialSourceBranch)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load repository info')
@@ -119,8 +122,12 @@ export function NewReviewPage () {
       let review
       if (source === 'staged') {
         review = await create({ sourceType: 'staged' })
-      } else if (source === 'branch' && selectedBranch) {
-        review = await create({ sourceType: 'branch', sourceRef: selectedBranch })
+      } else if (source === 'branch' && selectedBranch && selectedBaseBranch) {
+        review = await create({
+          sourceType: 'branch',
+          sourceRef: selectedBranch,
+          baseRef: selectedBaseBranch,
+        })
       } else if (source === 'commits' && selectedCommits.length > 0) {
         review = await create({ sourceType: 'commits', sourceRef: selectedCommits.join(',') })
       } else {
@@ -130,6 +137,22 @@ export function NewReviewPage () {
       navigate(`/reviews/${review.id}`)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create review')
+    }
+  }
+
+  const handleSourceBranchChange = (branchName: string) => {
+    setSelectedBranch(branchName)
+
+    if (branchName && branchName === selectedBaseBranch) {
+      setSelectedBaseBranch(getFirstDifferentBranch(branches, branchName))
+    }
+  }
+
+  const handleBaseBranchChange = (branchName: string) => {
+    setSelectedBaseBranch(branchName)
+
+    if (branchName && branchName === selectedBranch) {
+      setSelectedBranch(getFirstDifferentBranch(branches, branchName))
     }
   }
 
@@ -164,7 +187,7 @@ export function NewReviewPage () {
 
   const canCreate =
     (source === 'staged' && hasStagedChanges) ||
-    (source === 'branch' && selectedBranch) ||
+    (source === 'branch' && selectedBranch && selectedBaseBranch && selectedBranch !== selectedBaseBranch) ||
     (source === 'commits' && selectedCommits.length > 0)
 
   return (
@@ -228,7 +251,7 @@ export function NewReviewPage () {
             <div className='flex-1'>
               <div className='font-semibold text-[var(--gh-text-primary)]'>Branch Comparison</div>
               <div className='text-sm text-[var(--gh-text-secondary)] mt-1'>
-                Review a branch against the default branch
+                Review one branch against another branch
               </div>
             </div>
           </button>
@@ -259,24 +282,53 @@ export function NewReviewPage () {
 
         {/* Branch Selection */}
         {source === 'branch' && (
-          <div className='mt-6 gh-card p-4'>
-            <label className='block text-sm font-semibold text-[var(--gh-text-primary)] mb-2'>
-              Select branch to review
-            </label>
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className='gh-input w-full'
-            >
-              <option value=''>Select a branch...</option>
-              {branches.filter(branch => !isDefaultBranchName(branch.name)).map((branch) => (
-                <option key={branch.name} value={branch.name}>
-                  {branch.name} {branch.isRemote && '(remote)'}
-                </option>
-              ))}
-            </select>
-            <p className='text-xs text-[var(--gh-text-muted)] mt-2'>
-              Shows changes in the selected branch that are not in the default branch
+          <div className='mt-6 gh-card p-4 space-y-4'>
+            <div>
+              <label htmlFor='branch-source-select' className='block text-sm font-semibold text-[var(--gh-text-primary)] mb-2'>
+                Branch to review
+              </label>
+              <select
+                id='branch-source-select'
+                aria-label='Branch to review'
+                value={selectedBranch}
+                onChange={(e) => handleSourceBranchChange(e.target.value)}
+                className='gh-input w-full'
+              >
+                <option value=''>Select a branch...</option>
+                {branches
+                  .filter(branch => branch.name !== selectedBaseBranch)
+                  .map((branch) => (
+                    <option key={branch.name} value={branch.name}>
+                      {branch.name} {branch.isRemote && '(remote)'}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor='branch-base-select' className='block text-sm font-semibold text-[var(--gh-text-primary)] mb-2'>
+                Compare against
+              </label>
+              <select
+                id='branch-base-select'
+                aria-label='Compare against'
+                value={selectedBaseBranch}
+                onChange={(e) => handleBaseBranchChange(e.target.value)}
+                className='gh-input w-full'
+              >
+                <option value=''>Select a base branch...</option>
+                {branches
+                  .filter(branch => branch.name !== selectedBranch)
+                  .map((branch) => (
+                    <option key={branch.name} value={branch.name}>
+                      {branch.name} {branch.isRemote && '(remote)'}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <p className='text-xs text-[var(--gh-text-muted)]'>
+              The default comparison target is {defaultBranch || 'the repository default branch'}, but you can choose any other branch.
             </p>
           </div>
         )}

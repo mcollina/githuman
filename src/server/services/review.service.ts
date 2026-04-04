@@ -80,6 +80,7 @@ export class ReviewService {
 
     const sourceType = request.sourceType || 'staged'
     const sourceRef = request.sourceRef || null
+    const requestedBaseRef = request.baseRef || null
 
     let baseRef: string | null
     let fileMetadata: DiffFileMetadata[]
@@ -120,8 +121,13 @@ export class ReviewService {
         hunksData: ReviewFileRepository.serializeHunks(file.hunks),
       }))
     } else if (sourceType === 'branch' && sourceRef) {
-      // Review a selected branch against the repository default branch without loading the full patch.
-      baseRef = await this.git.getDefaultBranch()
+      // Review a selected branch against the requested branch or repository default branch.
+      baseRef = requestedBaseRef ?? await this.git.getDefaultBranch()
+
+      if (baseRef === sourceRef) {
+        throw new ReviewError('Source and target branches must be different', 'INVALID_SOURCE')
+      }
+
       fileMetadata = await this.git.getBranchDiffMetadata(sourceRef, baseRef)
 
       if (fileMetadata.length === 0) {

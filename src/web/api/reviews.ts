@@ -132,6 +132,10 @@ export interface CommitInfo {
   date: string;
 }
 
+export interface DefaultBranchResponse {
+  defaultBranch: string;
+}
+
 export interface CommitsResponse {
   commits: CommitInfo[];
   hasMore: boolean;
@@ -147,6 +151,7 @@ export interface GetCommitsParams {
 export const gitApi = {
   getInfo: () => api.get<RepositoryInfo>('/git/info'),
   getBranches: () => api.get<BranchInfo[]>('/git/branches'),
+  getDefaultBranch: () => api.get<DefaultBranchResponse>('/git/default-branch'),
   getCommits: (params: GetCommitsParams = {}) => {
     const searchParams = new URLSearchParams()
     if (params.limit) searchParams.set('limit', params.limit.toString())
