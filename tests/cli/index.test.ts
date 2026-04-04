@@ -52,6 +52,7 @@ describe('CLI', () => {
       assert.ok(result.stdout.includes('Usage:'))
       assert.ok(result.stdout.includes('serve'))
       assert.ok(result.stdout.includes('list'))
+      assert.ok(result.stdout.includes('ask'))
     })
 
     it('should show help with -h flag', async () => {
@@ -381,6 +382,53 @@ describe('CLI', () => {
       assert.strictEqual(listResult.exitCode, 0)
       assert.ok(listResult.stdout.includes('Complete alias test'))
       assert.ok(listResult.stdout.includes('[x]'))
+    })
+  })
+
+  describe('ask command', () => {
+    it('should show help with --help flag', async () => {
+      const result = await runCli(['ask', '--help'])
+
+      assert.strictEqual(result.exitCode, 0)
+      assert.ok(result.stdout.includes('Usage: githuman ask'))
+      assert.ok(result.stdout.includes('--review <id>'))
+      assert.ok(result.stdout.includes('--json'))
+    })
+
+    it('should create a review request with the default message', async (t) => {
+      const askTempDir = await createTestRepoWithDb(t)
+      const result = await runCli(['ask'], { cwd: askTempDir })
+
+      assert.strictEqual(result.exitCode, 0)
+      assert.ok(result.stdout.includes('Created review request'))
+      assert.ok(result.stdout.includes('Review request: Please review the current changes.'))
+
+      const listResult = await runCli(['todo', 'list', '--all'], { cwd: askTempDir })
+      assert.strictEqual(listResult.exitCode, 0)
+      assert.ok(listResult.stdout.includes('Review request: Please review the current changes.'))
+    })
+
+    it('should create a review request with a custom message', async (t) => {
+      const askTempDir = await createTestRepoWithDb(t)
+      const result = await runCli(['ask', 'Please review the parser changes'], { cwd: askTempDir })
+
+      assert.strictEqual(result.exitCode, 0)
+      assert.ok(result.stdout.includes('Review request: Please review the parser changes'))
+
+      const listResult = await runCli(['todo', 'list', '--all'], { cwd: askTempDir })
+      assert.strictEqual(listResult.exitCode, 0)
+      assert.ok(listResult.stdout.includes('Review request: Please review the parser changes'))
+    })
+
+    it('should output JSON when requested', async (t) => {
+      const askTempDir = await createTestRepoWithDb(t)
+      const result = await runCli(['ask', 'Does this look correct?', '--json'], { cwd: askTempDir })
+
+      assert.strictEqual(result.exitCode, 0)
+      const data = JSON.parse(result.stdout)
+      assert.strictEqual(data.content, 'Review request: Does this look correct?')
+      assert.strictEqual(data.completed, false)
+      assert.strictEqual(data.reviewId, null)
     })
   })
 
