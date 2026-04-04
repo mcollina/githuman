@@ -1,690 +1,468 @@
-# `githuman ask` plan
+# `githuman ask` redesign plan
 
-## Goal
+## Status
 
-Turn `githuman ask` into a synchronous handoff command for agent ↔ human collaboration:
+The current implementation proved that a synchronous agent ↔ human handoff is valuable, but it also exposed a major UX problem:
 
-1. The agent runs `githuman ask`.
-2. GitHuman makes the review UI available and prints the URL, optionally opening the browser.
-3. The human reviews the changes and leaves feedback in GitHuman.
-4. When the human signals they are done, `githuman ask` exits by printing the human's feedback:
-   - todo items
-   - review comments
-   - review status changes
-5. The agent reads that output and applies fixes.
-6. The feature ships with clear documentation and website updates so people immediately understand why it is useful and how to use it.
+- using todos as the control mechanism is wrong
+- the human has to understand internal workflow details
+- the UI is too generic for a handoff flow
+- there is no obvious single action that says “give this back to the assistant”
 
-This is intentionally different from the current "create one todo and exit" behavior.
+This document replaces the earlier todo-driven plan.
 
 ---
 
-## Proposed UX
+## Product goal
 
-### Basic flow
+`githuman ask` should feel like a first-class handoff between an assistant and a human reviewer.
 
-```bash
-githuman ask
-```
+Desired flow:
 
-Behavior:
+1. the assistant runs `githuman ask`
+2. GitHuman opens a dedicated review/handoff page
+3. the human reviews the changes and leaves feedback
+4. the human clicks a clear primary action: **Continue assistant**
+5. `githuman ask` exits and prints the feedback for the assistant
 
-- start GitHuman if needed, using serve-like options
-- print the review URL
-- optionally open the browser
-- wait until the human marks the review request as complete
-- print a structured summary of the human feedback
-- exit with success
+The completion signal must be explicit and built for this feature, not borrowed from todos.
 
-### With a prompt for the human
+---
+
+## Core product decisions
+
+## 1. `ask` must be a first-class object
+
+Do **not** model ask sessions as todos.
+
+Introduce a dedicated persisted entity, for example `ask_sessions`.
+
+Suggested fields:
+
+- `id`
+- `repository_path`
+- `review_id` nullable
+- `message`
+- `status`
+  - `waiting_for_human`
+  - `ready_for_agent`
+  - `cancelled`
+- `assistant_context` nullable
+- `created_at`
+- `updated_at`
+- `completed_at` nullable
+
+Optional later fields:
+
+- `feedback_summary`
+- `url_token` or access metadata if needed
+- `agent_name` / `agent_id`
+
+## 2. Completion must be explicit
+
+The human should finish the handoff by clicking a primary UI button:
+
+- **Continue assistant**
+
+Optional secondary button:
+
+- `Cancel request`
+
+This button should update the ask session status to `ready_for_agent`.
+
+That status change is the only completion signal `githuman ask` should wait on.
+
+## 3. Todos remain useful, but not for control flow
+
+Todos can still exist as review artifacts.
+
+They may be part of the feedback returned to the assistant, but they must not be used to:
+
+- represent the ask session itself
+- determine whether the human is done
+- force the human to understand internal mechanics
+
+---
+
+## UX requirements
+
+## Dedicated ask page
+
+`githuman ask` should send the human to a focused page, not a generic dashboard.
+
+Example routes:
+
+- `/ask/:id`
+- or `/handoff/:id`
+
+This page should be massively simpler than the normal review UI.
+
+### Page goals
+
+The page should answer three questions immediately:
+
+1. What is the assistant asking for?
+2. Where should I leave feedback?
+3. How do I hand this back to the assistant?
+
+### Page content
+
+Recommended layout:
+
+- title: `Assistant review request`
+- assistant message
+- review context
+  - linked review, if available
+  - repository / branch context
+- concise instructions
+- current feedback state
+  - comments count
+  - unresolved comments count
+  - todos count
+- large sticky primary button:
+  - **Continue assistant**
+- smaller secondary button:
+  - `Cancel request`
+
+### Interaction model
+
+The human should be able to:
+
+1. inspect the review
+2. leave comments
+3. add todos if useful
+4. click **Continue assistant**
+
+No hidden rules.
+No “mark this special todo as done.”
+No generic workflow leakage.
+
+---
+
+## CLI behavior
+
+## Command flow
 
 ```bash
 githuman ask "Please review the parser refactor"
 ```
 
-This creates a visible review-request marker in GitHuman so the human knows what the agent is asking for.
+Behavior:
 
-### With explicit network settings
+1. resolve config like `serve`
+2. reuse a running GitHuman server if available, otherwise start one
+3. create an ask session
+4. print the dedicated ask URL
+5. optionally open the browser
+6. wait for ask session status to become `ready_for_agent` or `cancelled`
+7. collect feedback from the session
+8. print plain text or JSON output for the assistant
 
-```bash
-githuman ask --host 0.0.0.0 --port 4000 --open
+## Suggested output
+
+Plain text:
+
+```text
+GitHuman feedback ready
+URL: https://host:port/ask/123
+Ask status: ready_for_agent
+Review status: changes_requested
+
+Todos:
+- Add a regression test for whitespace-only input
+
+Comments:
+- src/parser.ts:42
+  "Please reject undefined explicitly."
 ```
 
-Options should closely match `githuman serve`.
+JSON:
+
+```json
+{
+  "url": "https://host:port/ask/123",
+  "askStatus": "ready_for_agent",
+  "reviewStatus": "changes_requested",
+  "todos": [],
+  "comments": []
+}
+```
 
 ---
 
-## Proposed completion signal
+## Feedback semantics
 
-The command needs a concrete way to know when the human is done.
+When `githuman ask` completes, it should return feedback created during that ask session.
 
-### Recommended approach
+Recommended scope:
 
-Use a dedicated request todo created by `githuman ask`.
+- comments created or updated after ask session start
+- todos created or updated after ask session start
+- review status at completion time
+- optionally unresolved comments for the targeted review
 
-Example content:
-
-- `AI review request: Please review the parser refactor`
-- `AI review request: Please review the current changes`
-
-The human completes their turn by marking that todo as done in the UI.
-
-### Why this is the best initial design
-
-- no new database schema is required
-- no new UI concept is required to ship v1
-- works with the existing todo system
-- gives the CLI an unambiguous "done" signal
-- keeps the review loop explicit for both human and agent
-
-### Optional future improvement
-
-Later we can add a dedicated UI button like:
-
-- `Finish human review`
-- `Send feedback back to agent`
-
-That would be cleaner, but it requires a new UI/backend concept.
+If the ask session is tied to a review, filter primarily by that review.
 
 ---
 
-## What `githuman ask` should do
+## Config behavior
 
-### 1. Resolve runtime config
+Keep the new config work.
 
-Load settings in this priority order:
+Use repo-local config:
 
-1. CLI flags
-2. config file
-3. existing defaults
+- `.githuman/config.json`
 
-Relevant settings:
+Supported defaults:
 
 - `host`
 - `port`
 - `https`
-- `auth`
 - `open`
+- `authToken`
 
-### 2. Ensure GitHuman is available
+Precedence:
 
-Two possible strategies:
-
-#### Option A: start an in-process server from `ask`
-
-Pros:
-- one command does everything
-- simple user experience
-
-Cons:
-- `ask` becomes responsible for lifecycle management
-- more care needed for shutdown and polling
-
-#### Option B: connect to an already-running server, otherwise start one
-
-Pros:
-- nicer if the user already has GitHuman open
-- reuses existing running session
-
-Cons:
-- slightly more branching in the logic
-
-### Recommendation
-
-Implement **Option B**:
-
-1. check `GET /api/health`
-2. if reachable, reuse it
-3. otherwise start a local server with the resolved config
-
----
-
-## URL behavior
-
-`githuman ask` should always print the URL to stdout/stderr in a copyable form.
-
-Examples:
-
-- `http://localhost:3847`
-- `https://192.168.1.10:3847?token=...`
-
-If `--open` is enabled, also open the browser.
-
-Default behavior should match `serve` semantics as closely as possible.
-
----
-
-## Config file
-
-## Goal
-
-Avoid forcing the agent/user to pass `--host` and `--port` every time.
-
-### Proposed file location
-
-Repository-local:
-
-- `.githuman/config.json`
-
-This keeps the settings next to the repository's GitHuman data.
-
-### Example
-
-```json
-{
-  "host": "localhost",
-  "port": 3847,
-  "https": false,
-  "open": true
-}
-```
-
-### Why repo-local first
-
-- matches the existing `.githuman/` data model
-- works well for dogfooding inside one repository
-- easy for agents to discover
-- avoids surprising machine-global behavior
-
-### Future extension
-
-If needed later, support both:
-
-1. `~/.githuman/config.json`
+1. CLI flags
 2. `.githuman/config.json`
+3. built-in defaults
 
-with repo-local taking precedence.
-
-### Required behavior
-
-- `serve` should also read the config file
-- `ask` should reuse the same config loader
-- CLI flags always override config file values
+This part of the implementation is still valid and should remain.
 
 ---
 
-## Documentation and website changes
+## Backend/API changes
 
-This feature is important enough that it should ship with a documentation and marketing pass, not just code.
+## New persistence
 
-### Product story to communicate
+Add an `ask_sessions` table.
 
-`githuman ask` is the handoff point between an LLM and a human reviewer:
+Suggested migration:
 
-1. the agent asks for review
-2. GitHuman opens a human-friendly review surface
-3. the human leaves comments and todos
-4. the command returns those comments to the agent
-5. the agent fixes the issues
+- create table
+- add indexes for `status`, `review_id`, `repository_path`, `created_at`
 
-That loop is the headline. It is novel, useful, and easy to demo.
+## Repository/service layer
 
-### Documentation updates
+Add:
 
-We should update at least:
+- `AskSessionRepository`
+- `AskSessionService`
 
-- `README.md`
-- CLI help output examples where relevant
-- any docs page that explains the review workflow
-- release notes / changelog entry if we keep one
+Capabilities:
 
-### README changes
+- create ask session
+- fetch ask session by ID
+- list ask sessions if needed
+- mark as ready for agent
+- cancel ask session
+- compute session feedback summary
 
-The README should include:
+## API routes
 
-- a short feature callout near the top
-- a concrete `githuman ask` example
-- a short explanation of the human-in-the-loop flow
-- the new config file location and example
-- how completion works in v1 (mark the request todo as done)
+Add endpoints such as:
 
-### CLI reference changes
+- `POST /api/asks`
+- `GET /api/asks/:id`
+- `PATCH /api/asks/:id`
+- `POST /api/asks/:id/continue`
+- `POST /api/asks/:id/cancel`
+- optional `GET /api/asks/:id/feedback`
+
+This makes the flow explicit and testable.
+
+---
+
+## Frontend changes
+
+## New ask page
+
+Add a dedicated page and route for the ask handoff.
+
+Likely additions:
+
+- `src/web/pages/AskPage.tsx`
+- route in `src/web/App.tsx`
+- API client methods in `src/web/api/...`
+- hooks for ask session loading and completion
+
+## Simplified UI requirements
+
+The ask page should:
+
+- prioritize the assistant message
+- make the next action obvious
+- reduce navigation noise
+- prominently show the **Continue assistant** button
+
+The page may link into the full review UI, but the handoff page itself must stay simple.
+
+## Continue button behavior
+
+Clicking **Continue assistant** should:
+
+- update ask session status to `ready_for_agent`
+- optionally confirm the action
+- show immediate success state
+- allow `githuman ask` to exit
+
+---
+
+## Documentation updates
+
+This is still a flagship feature and needs docs alongside implementation.
+
+## README
+
+Update README to describe the new first-class handoff flow:
+
+- `githuman ask` creates a dedicated assistant review request
+- the human completes the handoff with **Continue assistant**
+- the feature is distinct from todos
+- config file usage and precedence
+
+## CLI docs
 
 Document:
 
 - `githuman ask` options
-- config precedence
-- how `ask` differs from `serve`
-- JSON output mode for agent integrations
+- server reuse/start behavior
+- JSON output
+- cancellation behavior
 
-### Workflow docs changes
+## Explanation docs
 
-Add or update a how-to guide covering:
+Add a short explanation of why this feature exists:
 
-- how to ask a human for review from an agent session
-- how the human finishes their turn
-- how the agent resumes from the printed feedback
-
-Also add an explanation page or README subsection covering:
-
-- why `githuman ask` exists
-- why the request todo is used as the completion signal in v1
-- how this creates a tight human ↔ agent review loop
-
-### Website changes
-
-The website should treat this as a flagship feature.
-
-Recommended changes:
-
-- add a hero or feature section for `githuman ask`
-- explain the "agent asks → human reviews → agent resumes" loop visually
-- include a terminal example showing `githuman ask`
-- include one short UI screenshot of the review experience
-- add a concise "why this matters" explanation for teams using AI coding agents
-
-### Screenshots and demo assets
-
-Because this is a very visual feature, we should refresh screenshots after implementation.
-
-At minimum:
-
-- capture a screenshot showing the request todo / review workflow
-- update README screenshots if the feature is shown there
-- update website assets if the landing page references the new flow
-
-If needed, refresh screenshots with:
-
-```bash
-node scripts/screenshots.ts
-```
-
-### Messaging guidance
-
-The tone should frame this feature as:
-
-- human-in-the-loop review for AI coding agents
-- a simple bridge between coding agents and human reviewers
-- a workflow feature, not just another CLI command
+- AI agents need a clean human checkpoint
+- GitHuman provides a true human-in-the-loop handoff
+- the assistant resumes only when the human explicitly returns control
 
 ---
 
-## Feedback collected at the end
+## Website updates
 
-When the human completes the request, `githuman ask` should print:
+The website should highlight this redesigned flow, not the old todo workaround.
 
-1. the request todo status
-2. all current pending todos relevant to the review session
-3. all comments added by the human during the session
-4. the latest review status
+Messaging should emphasize:
 
-### Recommended output shape
+- assistant asks for review
+- human reviews in a focused UI
+- human clicks **Continue assistant**
+- assistant resumes with structured feedback
 
-Plain text, optimized for agent consumption:
+Recommended updates:
 
-```text
-GitHuman feedback ready
-URL: http://localhost:3847
-Review status: changes_requested
-
-Todos:
-- Fix null handling in parser.ts
-- Add a test for empty input
-
-Comments:
-- src/parser.ts:42
-  "This should reject undefined explicitly."
-- src/parser.test.ts
-  "Please add a regression test for whitespace-only input."
-```
-
-### Important detail
-
-The command should only print **new feedback from this ask session**, not old historical comments.
-
-That means `ask` must record a session start timestamp and filter by:
-
-- todos created or updated after the session start
-- comments created or updated after the session start
-
-Potentially also filter by review ID when available.
-
----
-
-## Review targeting
-
-`githuman ask` needs to know what the human is reviewing.
-
-### v1 recommendation
-
-Operate on the current repository/session and do not force a review ID.
-
-Behavior:
-
-- if there is an active in-progress review, reuse it
-- otherwise open the GitHuman UI and let the human inspect staged changes or create/select the right review
-
-### Better v1.1
-
-Support optional targeting:
-
-```bash
-githuman ask --review <id>
-```
-
-If `--review` is provided, the end-of-command output should scope comments/todos to that review when possible.
-
----
-
-## Polling / waiting model
-
-`githuman ask` should wait until the request todo is completed.
-
-### Polling loop
-
-Every 1-2 seconds:
-
-- fetch the ask todo by ID
-- if completed, gather feedback and exit
-- if deleted, treat as cancelled
-- if server disappears, show a clear error
-
-### Nice-to-have later
-
-Use SSE/events for lower-latency updates instead of polling.
-
-For v1, polling is simpler and good enough.
-
----
-
-## Cancellation behavior
-
-### Human cancellation
-
-If the request todo is deleted, exit non-zero with:
-
-- `Review request was cancelled`
-
-### Agent cancellation
-
-If the process is interrupted:
-
-- stop any server that `ask` started itself
-- leave the request todo in place
-- print the URL again before exit if possible
-
----
-
-## CLI options
-
-`githuman ask` should support most of the `serve` options:
-
-- `-p, --port <number>`
-- `--host <string>`
-- `--https`
-- `--no-https`
-- `--cert <path>`
-- `--key <path>`
-- `--auth [token]`
-- `--open`
-- `--no-open`
-- `-v, --verbose`
-- `-h, --help`
-
-Additional ask-specific options:
-
-- `--review <id>` — optional review to watch/scope
-- `--interval <ms>` — optional polling interval
-- `--json` — machine-readable final output
-
----
-
-## JSON output mode
-
-For agent integrations, `--json` is important.
-
-Example:
-
-```json
-{
-  "url": "http://localhost:3847",
-  "reviewStatus": "changes_requested",
-  "todos": [
-    {
-      "id": "...",
-      "content": "Fix null handling in parser.ts",
-      "reviewId": null
-    }
-  ],
-  "comments": [
-    {
-      "id": "...",
-      "reviewId": "...",
-      "filePath": "src/parser.ts",
-      "lineNumber": 42,
-      "content": "This should reject undefined explicitly.",
-      "resolved": false
-    }
-  ]
-}
-```
-
----
-
-## Implementation checklist
-
-## Milestone 1 — Shared config loading
-
-### Code
-
-- [ ] add a shared CLI config loader for `.githuman/config.json`
-- [ ] support at least:
-  - [ ] `host`
-  - [ ] `port`
-  - [ ] `https`
-  - [ ] `open`
-  - [ ] auth-related defaults where appropriate
-- [ ] define precedence clearly:
-  - [ ] CLI flags override config file values
-  - [ ] config file values override built-in defaults
-- [ ] update `githuman serve` to use the shared config loader
-- [ ] keep existing env-var behavior working unless we intentionally replace it
-
-### Acceptance criteria
-
-- [ ] `githuman serve` works exactly as before when no config file exists
-- [ ] `githuman serve` respects `.githuman/config.json`
-- [ ] `--host` and `--port` no longer need to be passed every time when config is present
-
-## Milestone 2 — Rework `githuman ask`
-
-### Code
-
-- [ ] remove the current fire-and-forget todo-creation behavior
-- [ ] make `ask` resolve config using the same path as `serve`
-- [ ] make `ask` try to connect to an existing server first
-- [ ] if no server is running, start one with serve-like options
-- [ ] print the final URL in a copyable form
-- [ ] support browser opening with serve-like semantics
-- [ ] create a dedicated request todo for the ask session
-- [ ] store enough local session state to know:
-  - [ ] the request todo ID
-  - [ ] the session start time
-  - [ ] whether `ask` started the server itself
-
-### Acceptance criteria
-
-- [ ] `githuman ask` can be run in a fresh repo with GitHuman configured
-- [ ] the command shows the human where to review
-- [ ] the human has a visible request marker in the UI
-
-## Milestone 3 — Wait for human completion
-
-### Code
-
-- [ ] poll the request todo until it is completed
-- [ ] treat deletion of the request todo as cancellation
-- [ ] handle server unavailability with a clear error
-- [ ] support configurable polling interval if we keep `--interval`
-
-### Acceptance criteria
-
-- [ ] `githuman ask` stays open while the human is reviewing
-- [ ] `githuman ask` exits when the request todo is marked done
-- [ ] `githuman ask` exits non-zero if the request todo is deleted
-
-## Milestone 4 — Print human feedback for the agent
-
-### Code
-
-- [ ] record the session start timestamp before waiting
-- [ ] collect feedback created or updated during the session:
-  - [ ] todos
-  - [ ] comments
-  - [ ] review status
-- [ ] scope by review ID when available
-- [ ] print a plain-text summary for agent consumption
-- [ ] add `--json` output mode
-
-### Acceptance criteria
-
-- [ ] the final output contains only feedback relevant to this ask session
-- [ ] the output is useful enough for an agent to continue work without extra manual lookup
-- [ ] JSON output is stable and machine-readable
-
-## Milestone 5 — Polish and edge cases
-
-### Code
-
-- [ ] improve terminal messaging during startup and waiting
-- [ ] handle Ctrl+C cleanly
-- [ ] stop any server that `ask` started itself
-- [ ] leave user-started servers untouched
-- [ ] optionally support `--review <id>` in the initial implementation or clearly defer it
-- [ ] decide whether SSE is out of scope for v1 and document that decision
-
-### Acceptance criteria
-
-- [ ] interruption behavior is predictable
-- [ ] startup/wait/final-summary messages are easy to understand
-- [ ] there is no ambiguity about whether the review request finished, was cancelled, or failed
-
-## Milestone 6 — Documentation updates
-
-### README
-
-- [ ] add a feature callout for `githuman ask`
-- [ ] add a concrete CLI example
-- [ ] explain the human-in-the-loop flow
-- [ ] document `.githuman/config.json`
-- [ ] document the completion signal used in v1
-
-### Reference / guides
-
-- [ ] update CLI reference/help examples for `ask`
-- [ ] add or update a workflow guide for the full agent ↔ human loop
-- [ ] add or update explanatory docs for why `ask` exists and how it works
-- [ ] add release notes / changelog entry if applicable
-
-### Acceptance criteria
-
-- [ ] a new user can understand `githuman ask` from the README alone
-- [ ] a returning user can look up flags and config precedence quickly
-- [ ] docs reflect the exact shipped behavior, not an idealized version
-
-## Milestone 7 — Website updates
-
-### Website content
-
-- [ ] add `githuman ask` as a flagship feature on the landing page
-- [ ] explain the `agent asks → human reviews → agent resumes` loop
-- [ ] add a terminal snippet using `githuman ask`
-- [ ] add a short explanation of why this matters for AI-assisted development
-
-### Visuals
-
-- [ ] capture or update screenshots for the ask flow
-- [ ] refresh any demo assets used by the README or website
-- [ ] ensure screenshots match the current UI
-
-### Acceptance criteria
-
-- [ ] the website makes the feature easy to understand in a few seconds
-- [ ] the screenshots and copy match the shipped implementation
-- [ ] the feature feels prominent, not buried
-
-## Suggested delivery order
-
-- [ ] ship Milestone 1 first
-- [ ] ship Milestones 2 and 3 together
-- [ ] ship Milestone 4 before calling the feature complete
-- [ ] ship Milestones 6 and 7 in the same PR or release window as the code
-- [ ] validate all examples and screenshots immediately before merge
-
----
-
-## Backend/API needs
-
-### Can be done with existing APIs
-
-Mostly yes.
-
-Existing endpoints already cover:
-
-- health
-- todos
-- comments
-- reviews
-
-### Small additions that may help
-
-Potential optional additions:
-
-- `GET /api/todos/:id` is already available and useful for polling
-- query filters by timestamp may be useful later, but are not required for v1
-- a dedicated `ask session` API is not required for the first version
+- hero/feature callout for `githuman ask`
+- simple visual 3- or 4-step flow
+- screenshot of the simplified ask page
+- terminal example showing `githuman ask`
 
 ---
 
 ## Testing plan
 
-### CLI tests
+## Backend tests
 
 Add tests for:
 
-- config file loading
-- `ask --help`
-- URL printing
-- creating the request todo
-- waiting until the request todo is completed
-- final output includes new todos/comments
-- `--json` output
-- reuse running server vs start new server
+- ask session creation
+- status transitions
+- continue/cancel actions
+- feedback collection semantics
 
-### Integration tests
+## CLI tests
 
-Add a test that:
+Add tests for:
 
-1. starts the app
-2. runs `githuman ask`
-3. simulates the human by creating comments/todos and completing the ask todo
-4. asserts the command exits with the expected summary
+- creating an ask session
+- waiting for `ready_for_agent`
+- handling `cancelled`
+- JSON output
+- config precedence
+- server reuse vs startup
 
-### Optional e2e test
+## Frontend tests
 
-A future Playwright test could validate the full handoff loop in the browser.
+Add tests for:
 
-### Documentation / website validation
+- ask page rendering
+- Continue button visibility
+- Continue button action
+- cancellation flow
+- simplified page state
 
-Before shipping, verify that:
+## E2E tests
 
-- README examples match the real CLI output
-- the documented config file format matches the implementation
-- the website copy matches the final completion signal semantics
-- screenshots reflect the actual UI and current branding
+Add Playwright coverage for:
+
+1. run `githuman ask`
+2. open ask page
+3. leave comment(s)
+4. click **Continue assistant**
+5. assert CLI exits with collected feedback
 
 ---
 
-## Suggested first cut
+## Delivery plan
 
-To keep this shippable, the first implementation should:
+## Phase 1 — Preserve useful infrastructure
 
-- use `.githuman/config.json`
-- make `serve` and `ask` share config loading
-- have `ask` create a dedicated request todo
-- treat "request todo marked done" as the completion signal
-- poll with `GET /api/todos/:id`
-- print new todos/comments since session start
-- support `--json`
-- update the README and website copy alongside the implementation
+Keep and refine:
 
-This gives us the full agent → human → agent loop without requiring a major UI redesign, while also making the feature easy to discover.
+- shared config loading
+- serve/ask runtime sharing
+- CLI output formatting
+- docs/website momentum
+
+## Phase 2 — Introduce first-class ask sessions
+
+- add DB migration
+- add repository/service/routes
+- update CLI to use ask sessions instead of todos
+
+## Phase 3 — Build the dedicated ask page
+
+- add new route and page
+- simplify UI aggressively
+- add **Continue assistant** button
+
+## Phase 4 — Wire completion and feedback
+
+- CLI waits for ask session status
+- collect scoped feedback
+- finalize text and JSON output
+
+## Phase 5 — Docs and website
+
+- update README
+- update CLI docs
+- update landing page
+- add screenshot/demo assets
+
+---
+
+## Non-goals for v1 of the redesign
+
+Avoid these until the core flow feels right:
+
+- overly smart automation for detecting completion
+- making todos mandatory
+- embedding too much general review UI into the ask page
+- multi-agent orchestration
+
+The first priority is a simple, obvious, trustworthy handoff.
+
+---
+
+## Acceptance criteria
+
+This redesign is successful when:
+
+- `githuman ask` no longer depends on todos for completion
+- the human sees a dedicated, simplified handoff page
+- there is a clear **Continue assistant** button
+- the assistant reliably resumes with structured feedback
+- the flow is understandable without explanation
+
+If a first-time user can complete the handoff without being told about implementation details, the redesign worked.

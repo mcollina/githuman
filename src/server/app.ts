@@ -140,7 +140,7 @@ export async function buildApp (
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
-            description: 'Optional Bearer token authentication. Set via GITHUMAN_TOKEN env var or --token flag.',
+            description: 'Optional Bearer token authentication. Set via GITHUMAN_TOKEN env var or --auth flag.',
           },
         },
       },

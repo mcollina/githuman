@@ -31,6 +31,7 @@ Before `git commit`, you get a proper review interface—not a wall of terminal 
 ## Features
 
 - **Visual diff review** - Review staged changes in a clean, GitHub-like interface
+- **Human handoff for agents** - Run `githuman ask` to ask a human for review, wait, and hand their feedback back to the agent
 - **Inline comments** - Add comments to specific lines with code suggestions
 - **Review workflow** - Track status: in progress, approved, or changes requested
 - **Todo tracking** - Create tasks for follow-up work via CLI or web interface
@@ -56,6 +57,8 @@ npx githuman@latest serve
 
 ## Quick Start
 
+### Review staged changes before commit
+
 ```bash
 # Stage your changes (from AI agent or manual edits)
 git add .
@@ -65,6 +68,16 @@ githuman serve
 ```
 
 This opens a web interface at `http://localhost:3847` where you can review your staged changes before committing.
+
+### Ask a human to review and wait for feedback
+
+```bash
+githuman ask "Please review the parser refactor"
+```
+
+`githuman ask` starts or reuses GitHuman, prints the review URL, optionally opens the browser, waits for the human to mark the request todo as done, and then prints the new todos, comments, and review status updates for the agent.
+
+In v1, the completion signal is simple and explicit: the human finishes their turn by marking the ask todo as done in the UI.
 
 ## Agent Skills
 
@@ -86,8 +99,30 @@ githuman serve [options]
 Options:
   -p, --port <port>    Port to listen on (default: 3847)
   --host <host>        Host to bind to (default: localhost)
+  --open               Auto-open browser
   --no-open            Don't open browser automatically
-  --token <token>      Require authentication token
+  --https              Enable HTTPS
+  --no-https           Disable HTTPS
+  --cert <path>        Use a custom TLS certificate
+  --key <path>         Use a custom TLS private key
+  --auth [token]       Enable auth, optionally with a provided token
+  -v, --verbose        Enable verbose logging
+  -h, --help           Show help
+```
+
+### Ask a Human to Review
+
+```bash
+githuman ask [message] [options]
+
+Options:
+  -p, --port <port>    Port to use for GitHuman
+  --host <host>        Host to bind to when starting GitHuman
+  --open               Open the browser automatically
+  --no-open            Don't open the browser automatically
+  --review <id>        Scope feedback to a specific review
+  --interval <ms>      Polling interval in milliseconds
+  --json               Output final feedback as JSON
   -h, --help           Show help
 ```
 
@@ -140,6 +175,8 @@ Options:
 
 ## Workflow
 
+### Staging-area review
+
 1. **AI agent makes changes** - Claude, Copilot, Cursor, or any tool stages code
 2. **Run `githuman serve`** - Opens the review interface
 3. **Review the diff** - See exactly what changed, file by file
@@ -147,6 +184,14 @@ Options:
 5. **Create todos** - Track follow-up work
 6. **Decide** - Approve and commit, or request changes from the agent
 7. **Export** - Optionally save the review as documentation
+
+### Human-in-the-loop agent handoff
+
+1. **The agent runs `githuman ask`**
+2. **GitHuman starts or reconnects** and prints the review URL
+3. **The human reviews in the browser** and leaves comments or todos
+4. **The human marks the ask todo as done** when feedback is ready
+5. **`githuman ask` exits with the new feedback** so the agent can continue
 
 ## Web Interface
 
@@ -183,25 +228,52 @@ Set a token to require authentication:
 
 ```bash
 # Via CLI flag
-githuman serve --token mysecrettoken
+githuman serve --auth mysecrettoken-that-is-at-least-32-characters
+
+# Auto-generate a token
+githuman serve --auth
 
 # Via environment variable
-GITHUMAN_TOKEN=mysecrettoken githuman serve
+GITHUMAN_TOKEN=mysecrettoken-that-is-at-least-32-characters githuman serve
 ```
 
 Clients must include the token in the `Authorization` header:
 
 ```
-Authorization: Bearer mysecrettoken
+Authorization: Bearer mysecrettoken-that-is-at-least-32-characters
 ```
+
+## Configuration
+
+GitHuman can read repo-local defaults from `.githuman/config.json`.
+
+```json
+{
+  "host": "localhost",
+  "port": 3847,
+  "https": false,
+  "open": true
+}
+```
+
+Config precedence is:
+
+1. CLI flags
+2. `.githuman/config.json`
+3. built-in defaults
 
 ## Data Storage
 
-Reviews and comments are stored in a SQLite database at:
+GitHuman stores local data in:
 
 ```
-<repository>/.githuman/reviews.db
+<repository>/.githuman/
 ```
+
+Important files include:
+
+- `reviews.db` - reviews, comments, and todos
+- `config.json` - optional repo-local CLI defaults
 
 This directory is typically gitignored.
 

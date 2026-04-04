@@ -42,7 +42,7 @@ Commands:
   list           List all saved reviews for the current repository
   export         Export a review to markdown
   resolve        Mark a review as approved and resolve all comments
-  ask            Ask a human to review by creating a todo item
+  ask            Ask a human to review, wait, and print their feedback
   todo           Manage todo items for tracking tasks
 
 Options:
