@@ -1,5 +1,7 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { buildApp } from '../../src/server/app.ts'
 import { createConfig } from '../../src/server/config.ts'
 import type { FastifyInstance } from 'fastify'
@@ -118,6 +120,47 @@ describe('app', () => {
       assert.ok(app)
 
       await app.close()
+    })
+  })
+
+  describe('static app assets', () => {
+    let app: FastifyInstance
+
+    before(async () => {
+      const config = createConfig()
+      app = await buildApp(config, { logger: false })
+    })
+
+    after(async () => {
+      await app.close()
+    })
+
+    it('should serve built JavaScript assets instead of index.html', async () => {
+      const webDir = join(process.cwd(), 'dist', 'web')
+      const indexHtml = readFileSync(join(webDir, 'index.html'), 'utf-8')
+      const scriptMatch = indexHtml.match(/<script[^>]+src="([^"]+)"/)
+
+      assert.ok(scriptMatch, 'expected built index.html to reference a script asset')
+      const assetPath = scriptMatch[1]
+
+      const response = await app.inject({
+        method: 'GET',
+        url: assetPath,
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      assert.match(response.headers['content-type'] ?? '', /javascript|ecmascript|text\/plain/)
+      assert.doesNotMatch(response.body, /<!DOCTYPE html>/)
+    })
+
+    it('should return 404 for missing asset paths', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/assets/does-not-exist.js',
+      })
+
+      assert.strictEqual(response.statusCode, 404)
+      assert.doesNotMatch(response.body, /<!DOCTYPE html>/)
     })
   })
 

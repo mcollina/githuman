@@ -139,6 +139,29 @@ export const migrations: Migration[] = [
       CREATE UNIQUE INDEX idx_review_files_review_path ON review_files(review_id, file_path);
     `,
   },
+  {
+    version: 7,
+    name: 'create_ask_sessions_table',
+    up: `
+      CREATE TABLE ask_sessions (
+        id TEXT PRIMARY KEY,
+        repository_path TEXT NOT NULL,
+        review_id TEXT,
+        message TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'waiting_for_human',
+        assistant_context TEXT,
+        completed_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE SET NULL
+      ) STRICT;
+
+      CREATE INDEX idx_ask_sessions_status ON ask_sessions(status);
+      CREATE INDEX idx_ask_sessions_review ON ask_sessions(review_id);
+      CREATE INDEX idx_ask_sessions_repository ON ask_sessions(repository_path);
+      CREATE INDEX idx_ask_sessions_created ON ask_sessions(created_at DESC);
+    `,
+  },
 ]
 
 function getCurrentVersion (db: DatabaseSync): number {

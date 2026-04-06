@@ -11,7 +11,7 @@ import { SuccessSchema } from '../schemas/common.ts'
 import { loadGitignore } from '../utils/gitignore.ts'
 
 // Event types that can be broadcast
-export type EventType = 'todos' | 'reviews' | 'comments' | 'files'
+export type EventType = 'todos' | 'reviews' | 'comments' | 'files' | 'asks'
 
 // Extended message type for our events
 interface EventMessage extends Message {
@@ -36,7 +36,7 @@ async function broadcast (emitter: MQEmitterType, eventType: EventType, data?: u
 
 const NotifyBodySchema = Type.Object(
   {
-    type: Type.Union([Type.Literal('todos'), Type.Literal('reviews'), Type.Literal('comments'), Type.Literal('files')], {
+    type: Type.Union([Type.Literal('todos'), Type.Literal('reviews'), Type.Literal('comments'), Type.Literal('files'), Type.Literal('asks')], {
       description: 'Type of resource that changed',
     }),
     action: Type.Optional(

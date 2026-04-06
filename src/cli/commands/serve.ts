@@ -2,10 +2,9 @@
  * Serve command - start the review server
  */
 import { parseArgs } from 'node:util'
-import { readFileSync } from 'node:fs'
 import open from 'open'
-import { startServer, createConfig, generateToken } from '../../server/index.ts'
-import { loadOrCreateCertificates, getCertificatePaths } from '../../server/tls/certificates.ts'
+import { startServer } from '../../server/index.ts'
+import { getAccessUrl, resolveServerRuntime, extractAuthArg, stripAuthArg } from '../server-runtime.ts'
 
 function printHelp () {
   console.log(`
@@ -15,83 +14,49 @@ Start the review server and open web interface.
 
 Options:
   -p, --port <number>    Port to run server on (default: 3847)
+  --open                 Auto-open browser (default: true)
   --no-open              Don't auto-open browser
   --host <string>        Host to bind to (default: localhost)
   --https                Force HTTPS (auto-generates self-signed cert if needed)
-  --no-https             Disable HTTPS (only applies when --host is non-localhost)
+  --no-https             Disable HTTPS
   --cert <path>          Path to TLS certificate file (PEM format)
   --key <path>           Path to TLS private key file (PEM format)
   --auth [token]         Enable auth (auto-generates token if no value given)
   -v, --verbose          Enable verbose logging (full pino-pretty output)
   -h, --help             Show this help message
 
+Config file:
+  - .githuman/config.json can provide default host, port, https, open, and authToken
+  - CLI flags override config file values
+
 HTTPS:
-  - localhost (default): HTTP - no encryption needed for local development
-  - localhost + --https: HTTPS with self-signed certificate
-  - --host specified: HTTPS auto-enabled with self-signed certificate
-  - --no-https: Force HTTP even when using --host
+  - localhost (default): HTTP unless --https or config enables HTTPS
+  - non-localhost host: HTTPS auto-enabled with a self-signed certificate unless --no-https is used
   - --cert/--key: Use custom certificates (both required together)
   - Auto-generated certificates stored in ~/.githuman/cert.pem and ~/.githuman/key.pem
 
 Authentication:
-  - localhost (default): No auth required - safe for local development
-  - --host specified: Auth auto-enabled with generated token
+  - localhost (default): No auth required unless configured
+  - non-localhost host: Auth auto-enabled with generated token
   - --auth: Explicitly enable auth (auto-generate or provide your own 32+ char token)
 `)
 }
 
-/**
- * Check if --auth flag is present and if it has a value.
- * Returns:
- * - undefined: --auth not present
- * - null: --auth present without value (auto-generate)
- * - string: --auth present with value
- */
-function extractAuthArg (args: string[]): string | null | undefined {
-  const authIndex = args.findIndex(arg => arg === '--auth')
-  if (authIndex === -1) {
-    return undefined // --auth not present
-  }
-
-  const nextArg = args[authIndex + 1]
-  if (!nextArg || nextArg.startsWith('-')) {
-    return null // --auth present but no value
-  }
-
-  return nextArg // --auth with value
-}
-
 export async function serveCommand (args: string[]) {
-  // Pre-process --auth to handle optional value
   const authValue = extractAuthArg(args)
-
-  // Check if --https was explicitly passed (to force HTTPS on localhost)
-  const httpsExplicitlyEnabled = args.includes('--https')
-
-  // Remove --auth and its value from args for parseArgs (if present with value)
-  let filteredArgs = args
-  if (authValue !== undefined) {
-    const authIndex = args.findIndex(arg => arg === '--auth')
-    if (authValue === null) {
-      // Just --auth without value, remove only --auth
-      filteredArgs = [...args.slice(0, authIndex), ...args.slice(authIndex + 1)]
-    } else {
-      // --auth with value, remove both
-      filteredArgs = [...args.slice(0, authIndex), ...args.slice(authIndex + 2)]
-    }
-  }
+  const filteredArgs = stripAuthArg(args, authValue)
 
   const { values } = parseArgs({
     args: filteredArgs,
     allowNegative: true,
     options: {
-      port: { type: 'string', short: 'p', default: '3847' },
-      open: { type: 'boolean', default: true },
-      host: { type: 'string', default: 'localhost' },
-      https: { type: 'boolean', default: true },
+      port: { type: 'string', short: 'p' },
+      open: { type: 'boolean' },
+      host: { type: 'string' },
+      https: { type: 'boolean' },
       cert: { type: 'string' },
       key: { type: 'string' },
-      verbose: { type: 'boolean', short: 'v', default: false },
+      verbose: { type: 'boolean', short: 'v' },
       help: { type: 'boolean', short: 'h' },
     },
   })
@@ -101,73 +66,23 @@ export async function serveCommand (args: string[]) {
     return
   }
 
-  const host = values.host!
-  const isNonLocalhost = host !== 'localhost' && host !== '127.0.0.1'
-
-  // Validate --cert and --key must be used together
-  if ((values.cert && !values.key) || (!values.cert && values.key)) {
-    throw new Error('--cert and --key must be specified together')
-  }
-
-  // Determine auth token:
-  // - If --auth was used with a value, use that value
-  // - If --auth was used without value, auto-generate
-  // - If --host is specified (non-localhost), auto-generate
-  // - Otherwise (localhost, no --auth), no auth needed
-  let authToken: string | undefined
-  let tokenAutoGenerated = false
-  if (typeof authValue === 'string') {
-    // --auth <token> provided
-    authToken = authValue
-  } else if (authValue === null || isNonLocalhost) {
-    // --auth without value OR non-localhost host → auto-generate
-    authToken = generateToken()
-    tokenAutoGenerated = true
-  }
-  // else: localhost without --auth → no auth (authToken remains undefined → null in config)
-
-  // Determine HTTPS:
-  // - Custom certs provided → HTTPS enabled
-  // - --https explicitly passed → HTTPS enabled (force on localhost)
-  // - Non-localhost host + values.https (not --no-https) → HTTPS enabled
-  // - Otherwise → HTTP
-  const hasCustomCerts = !!(values.cert && values.key)
-  const enableHttps = hasCustomCerts || httpsExplicitlyEnabled || (isNonLocalhost && values.https)
-  let tlsCert: string | undefined
-  let tlsKey: string | undefined
-  let certificatePath: string | undefined
-
-  if (enableHttps) {
-    if (hasCustomCerts) {
-      // Load custom certificates from files
-      tlsCert = readFileSync(values.cert!, 'utf-8')
-      tlsKey = readFileSync(values.key!, 'utf-8')
-      certificatePath = values.cert!
-    } else {
-      // Use auto-generated self-signed certificates
-      const { cert, key } = await loadOrCreateCertificates()
-      tlsCert = cert
-      tlsKey = key
-      certificatePath = getCertificatePaths().certPath
-    }
-  }
-
-  const config = createConfig({
-    port: parseInt(values.port!, 10),
-    host,
-    authToken,
-    https: enableHttps,
-    tlsCert,
-    tlsKey,
+  const runtime = await resolveServerRuntime(args, {
+    port: values.port,
+    open: values.open,
+    host: values.host,
+    https: values.https,
+    cert: values.cert,
+    key: values.key,
+    verbose: values.verbose,
   })
 
-  // Start the server
-  await startServer(config, { verbose: values.verbose, tokenAutoGenerated, certificatePath })
+  await startServer(runtime.config, {
+    verbose: runtime.verbose,
+    tokenAutoGenerated: runtime.tokenAutoGenerated,
+    certificatePath: runtime.certificatePath,
+  })
 
-  // Open browser if requested
-  if (values.open) {
-    const protocol = config.https ? 'https' : 'http'
-    const url = `${protocol}://${config.host}:${config.port}`
-    await open(url)
+  if (runtime.openBrowser) {
+    await open(getAccessUrl(runtime.config))
   }
 }

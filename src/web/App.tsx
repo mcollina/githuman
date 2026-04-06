@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage'
 import { ReviewPage } from './pages/ReviewPage'
 import { StagedChangesPage } from './pages/StagedChangesPage'
 import { NewReviewPage } from './pages/NewReviewPage'
+import { AskPage } from './pages/AskPage'
 
 export function App () {
   return (
@@ -14,6 +15,7 @@ export function App () {
       <FontApplier />
       <HighlighterProvider>
         <Routes>
+          <Route path='/ask/:id' element={<AskPage />} />
           <Route path='/' element={<Layout />}>
             <Route index element={<StagedChangesPage />} />
             <Route path='new' element={<NewReviewPage />} />

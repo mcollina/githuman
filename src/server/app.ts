@@ -11,7 +11,7 @@ import cors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
 import fastifySSE from '@fastify/sse'
 import { existsSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import authPlugin from './plugins/auth.ts'
 import diffRoutes, { imageRoute } from './routes/diff.ts'
@@ -20,6 +20,7 @@ import commentRoutes from './routes/comments.ts'
 import todoRoutes from './routes/todos.ts'
 import gitRoutes from './routes/git.ts'
 import eventsRoutes from './routes/events.ts'
+import askRoutes from './routes/asks.ts'
 import type { ServerConfig } from './config.ts'
 import type { HealthResponse } from '../shared/types.ts'
 import { HealthResponseSchema } from './schemas/common.ts'
@@ -128,6 +129,7 @@ export async function buildApp (
         { name: 'diff', description: 'Git diff operations' },
         { name: 'git', description: 'Git repository information' },
         { name: 'events', description: 'Server-sent events for real-time updates' },
+        { name: 'asks', description: 'Assistant↔human handoff sessions' },
       ],
       servers: [
         {
@@ -140,7 +142,7 @@ export async function buildApp (
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
-            description: 'Optional Bearer token authentication. Set via GITHUMAN_TOKEN env var or --token flag.',
+            description: 'Optional Bearer token authentication. Set via GITHUMAN_TOKEN env var or --auth flag.',
           },
         },
       },
@@ -199,6 +201,7 @@ export async function buildApp (
   await app.register(todoRoutes)
   await app.register(gitRoutes)
   await app.register(eventsRoutes)
+  await app.register(askRoutes)
 
   // Serve static files if enabled and dist/web exists
   if (options.serveStatic !== false) {
@@ -207,14 +210,20 @@ export async function buildApp (
       await app.register(fastifyStatic, {
         root: staticPath,
         prefix: '/',
-        wildcard: false,
       })
 
-      // SPA fallback - serve index.html for non-API routes
+      // SPA fallback - serve index.html only for app routes, not missing assets
       app.setNotFoundHandler(async (request, reply) => {
-        if (!request.url.startsWith('/api/')) {
+        const pathname = request.url.split('?')[0]
+        const isAppRoute = request.method === 'GET' &&
+          !pathname.startsWith('/api/') &&
+          !pathname.startsWith('/docs') &&
+          extname(pathname) === ''
+
+        if (isAppRoute) {
           return reply.sendFile('index.html')
         }
+
         return reply.code(404).send({ error: 'Not found' })
       })
     }

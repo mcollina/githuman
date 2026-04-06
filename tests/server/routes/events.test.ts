@@ -75,6 +75,19 @@ describe('events routes', () => {
       assert.strictEqual(body.success, true)
     })
 
+    it('should accept asks notification', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/events/notify',
+        headers: authHeader(),
+        payload: { type: 'asks', action: 'updated' },
+      })
+
+      assert.strictEqual(response.statusCode, 200)
+      const body = JSON.parse(response.body)
+      assert.strictEqual(body.success, true)
+    })
+
     it('should accept notification without action', async () => {
       const response = await app.inject({
         method: 'POST',

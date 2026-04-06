@@ -52,6 +52,7 @@ describe('CLI', () => {
       assert.ok(result.stdout.includes('Usage:'))
       assert.ok(result.stdout.includes('serve'))
       assert.ok(result.stdout.includes('list'))
+      assert.ok(result.stdout.includes('ask'))
     })
 
     it('should show help with -h flag', async () => {
@@ -381,6 +382,19 @@ describe('CLI', () => {
       assert.strictEqual(listResult.exitCode, 0)
       assert.ok(listResult.stdout.includes('Complete alias test'))
       assert.ok(listResult.stdout.includes('[x]'))
+    })
+  })
+
+  describe('ask command', () => {
+    it('should show help with --help flag', async () => {
+      const result = await runCli(['ask', '--help'])
+
+      assert.strictEqual(result.exitCode, 0)
+      assert.ok(result.stdout.includes('Usage: githuman ask'))
+      assert.ok(result.stdout.includes('--review <id>'))
+      assert.ok(result.stdout.includes('--json'))
+      assert.ok(result.stdout.includes('--interval <ms>'))
+      assert.ok(result.stdout.includes('--host <string>'))
     })
   })
 
