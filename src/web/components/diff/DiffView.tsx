@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { DiffFile } from './DiffFile'
 import type { DiffFile as DiffFileType, DiffFileMetadata, DiffSummary } from '../../../shared/types'
 
@@ -13,6 +14,15 @@ interface DiffViewProps {
 }
 
 export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick, version = 'staged' }: DiffViewProps) {
+  // Scroll to the selected file when it changes
+  useEffect(() => {
+    if (!selectedFile) return
+    const el = document.getElementById(selectedFile)
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedFile])
+
   if (files.length === 0) {
     return (
       <div className='flex-1 flex items-center justify-center text-[var(--gh-text-muted)]'>
