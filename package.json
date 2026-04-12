@@ -1,6 +1,6 @@
 {
   "name": "githuman",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Review AI agent code changes before commit",
   "type": "module",
   "bin": {
