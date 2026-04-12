@@ -14,6 +14,7 @@ interface FileTreeViewProps {
   onBrowseModeChange?: (enabled: boolean) => void;
   mobileDrawerOpen?: boolean;
   onMobileDrawerChange?: (open: boolean) => void;
+  desktopWidth?: number;
 }
 
 interface TreeNodeProps {
@@ -109,7 +110,7 @@ function TreeNode ({ node, selectedFile, expandedFolders, onToggleFolder, onFile
   )
 }
 
-export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, filesWithComments, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: FileTreeViewProps) {
+export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, filesWithComments, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange, desktopWidth }: FileTreeViewProps) {
   const [filter, setFilter] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [localIsOpen, setLocalIsOpen] = useState(false)
@@ -326,7 +327,10 @@ export function FileTreeView ({ tree, selectedFile, onFileSelect, loading, files
 
   // Desktop: regular sidebar
   return (
-    <aside className='w-64 bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] overflow-y-auto flex flex-col'>
+    <aside
+      style={{ width: desktopWidth ?? 256 }}
+      className='shrink-0 bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] overflow-y-auto flex flex-col'
+    >
       {sidebarContent}
     </aside>
   )

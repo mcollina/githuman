@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { Sidebar } from '../layout/Sidebar'
+import { ResizeHandle } from '../layout/ResizeHandle'
 import { FileTreeView } from '../browse/FileTreeView'
 import { BrowseFileView } from '../browse/BrowseFileView'
 import { DiffView } from './DiffView'
 import { useCommentContext } from '../../contexts/CommentContext'
 import { useFileTree } from '../../hooks/useFileTree'
+import { useResizablePanel } from '../../hooks/useResizablePanel'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import { cn } from '../../lib/utils'
 import type {
   DiffFile,
@@ -65,6 +68,7 @@ function FileTreeWithComments ({
   onBrowseModeChange,
   mobileDrawerOpen,
   onMobileDrawerChange,
+  desktopWidth,
 }: {
   tree: FileTreeNode[]
   selectedFile: string | null
@@ -74,6 +78,7 @@ function FileTreeWithComments ({
   onBrowseModeChange?: (enabled: boolean) => void
   mobileDrawerOpen?: boolean
   onMobileDrawerChange?: (open: boolean) => void
+  desktopWidth?: number
 }) {
   const commentContext = useCommentContext()
 
@@ -99,6 +104,7 @@ function FileTreeWithComments ({
       onBrowseModeChange={onBrowseModeChange}
       mobileDrawerOpen={mobileDrawerOpen}
       onMobileDrawerChange={onMobileDrawerChange}
+      desktopWidth={desktopWidth}
     />
   )
 }
@@ -177,6 +183,10 @@ export function BrowsableDiffView ({
     }
   }, [browseMode])
 
+  // Resizable left panel (desktop only)
+  const { width: leftPanelWidth, startResize, adjustWidth } = useResizablePanel()
+  const isMobile = useIsMobile()
+
   return (
     <div className='flex-1 flex min-w-0 overflow-hidden'>
       {browseMode
@@ -190,6 +200,7 @@ export function BrowsableDiffView ({
             onBrowseModeChange={handleBrowseModeChange}
             mobileDrawerOpen={mobileDrawerOpen}
             onMobileDrawerChange={setMobileDrawerOpen}
+            desktopWidth={leftPanelWidth}
           />
           )
         : (
@@ -204,8 +215,16 @@ export function BrowsableDiffView ({
             onBrowseModeChange={handleBrowseModeChange}
             mobileDrawerOpen={mobileDrawerOpen}
             onMobileDrawerChange={setMobileDrawerOpen}
+            desktopWidth={leftPanelWidth}
           />
           )}
+      {!isMobile && (
+        <ResizeHandle
+          onPointerDown={startResize}
+          onAdjust={adjustWidth}
+          ariaLabel='Resize file list'
+        />
+      )}
       <div className='flex-1 flex flex-col min-w-0'>
         {/* Header with browse toggle */}
         {showHeaderToggle && (

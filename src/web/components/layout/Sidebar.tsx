@@ -16,6 +16,7 @@ interface SidebarProps {
   onBrowseModeChange?: (enabled: boolean) => void;
   mobileDrawerOpen?: boolean;
   onMobileDrawerChange?: (open: boolean) => void;
+  desktopWidth?: number;
 }
 
 function getStatusColor (status: DiffFileMetadata['status']) {
@@ -48,7 +49,7 @@ function getStatusLabel (status: DiffFileMetadata['status']) {
   }
 }
 
-export function Sidebar ({ files, selectedFile, onFileSelect, selectedIndex, showStageButtons, onStageFile, staging, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange }: SidebarProps) {
+export function Sidebar ({ files, selectedFile, onFileSelect, selectedIndex, showStageButtons, onStageFile, staging, browseMode, onBrowseModeChange, mobileDrawerOpen, onMobileDrawerChange, desktopWidth }: SidebarProps) {
   const [filter, setFilter] = useState('')
   const [localIsOpen, setLocalIsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -266,7 +267,10 @@ export function Sidebar ({ files, selectedFile, onFileSelect, selectedIndex, sho
   // Desktop: regular sidebar
   return (
     <>
-      <aside className='w-64 bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] overflow-y-auto flex flex-col'>
+      <aside
+        style={{ width: desktopWidth ?? 256 }}
+        className='shrink-0 bg-[var(--gh-bg-secondary)] border-r border-[var(--gh-border)] overflow-y-auto flex flex-col'
+      >
         {sidebarContent}
       </aside>
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
