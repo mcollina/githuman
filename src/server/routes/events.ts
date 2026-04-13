@@ -66,6 +66,7 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   // Set up file watcher for live updates
   let fileWatcher: FSWatcher | null = null
+  let closed = false
   const repoPath = fastify.config.repositoryPath
 
   // Debounced broadcast to avoid flooding on rapid file changes
@@ -81,6 +82,9 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     try {
       // Load gitignore patterns for filtering
       const ig = await loadGitignore(repoPath, fastify.log)
+
+      // Server may have shut down while we were scanning
+      if (closed) return
 
       fileWatcher = chokidar.watch(repoPath, {
         ignored: (filePath: string) => {
@@ -121,11 +125,15 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     }
   }
 
-  // Start watching immediately (could optimize to start only when clients connect)
-  await startWatching()
+  // Start watching in the background to avoid blocking plugin registration.
+  // On large repos, loadGitignore can exceed Fastify's default plugin timeout.
+  startWatching().catch((err) => {
+    fastify.log.warn({ err }, 'Unexpected error starting file watcher')
+  })
 
   // Clean up on server close
   fastify.addHook('onClose', async () => {
+    closed = true
     // Close all active SSE connections
     fastify.log.info({ clients: activeConnections.size }, 'Closing active SSE connections')
     for (const connection of activeConnections) {
