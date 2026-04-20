@@ -3,7 +3,8 @@
  */
 import { Type, type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import { GitService } from '../services/git.service.ts'
-import { parseDiff, getDiffSummary } from '../services/diff.service.ts'
+import { parseDiff, getDiffSummary, filterDiffFiles } from '../services/diff.service.ts'
+import { loadGitignore } from '../utils/gitignore.ts'
 import { ErrorSchema } from '../schemas/common.ts'
 
 const DiffLineSchema = Type.Object({
@@ -185,7 +186,12 @@ const diffRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
     // Get and parse the diff
     const diffText = await gitService.getStagedDiff()
-    const files = parseDiff(diffText)
+    const allFiles = parseDiff(diffText)
+
+    // Filter out files matching .gitignore patterns
+    const ig = await loadGitignore(fastify.config.repositoryPath, request.log)
+    const files = filterDiffFiles(allFiles, ig)
+
     const summary = getDiffSummary(files)
     const repository = await gitService.getRepositoryInfo()
 
@@ -249,7 +255,12 @@ const diffRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
     // Get and parse the diff
     const diffText = await gitService.getUnstagedDiff()
-    const files = parseDiff(diffText)
+    const allFiles = parseDiff(diffText)
+
+    // Filter out files matching .gitignore patterns
+    const ig = await loadGitignore(fastify.config.repositoryPath, request.log)
+    const files = filterDiffFiles(allFiles, ig)
+
     const summary = getDiffSummary(files)
     const repository = await gitService.getRepositoryInfo()
 
