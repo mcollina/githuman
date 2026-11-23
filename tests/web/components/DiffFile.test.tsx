@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DiffFile } from '../../../src/web/components/diff/DiffFile'
 import { CommentProvider } from '../../../src/web/contexts/CommentContext'
@@ -84,6 +84,44 @@ describe('DiffFile', () => {
     const expandedButtons = screen.getAllByRole('button')
     fireEvent.click(expandedButtons[0])
     expect(screen.queryByText('line 1')).toBeNull()
+  })
+
+  it('does not show the reviewed checkbox without a handler', () => {
+    renderWithProvider(<DiffFile file={mockFile} />)
+
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('starts collapsed when reviewed', () => {
+    renderWithProvider(<DiffFile file={mockFile} defaultExpanded reviewed onReviewedChange={() => {}} />)
+
+    expect(screen.queryByText('line 1')).toBeNull()
+    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('collapses when marked reviewed and expands when unmarked', () => {
+    const onReviewedChange = vi.fn()
+    const { rerender } = renderWithProvider(
+      <DiffFile file={mockFile} defaultExpanded onReviewedChange={onReviewedChange} />
+    )
+    expect(screen.getByText('line 1')).toBeDefined()
+
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect(onReviewedChange).toHaveBeenCalledWith('src/app.ts', true)
+
+    rerender(
+      <CommentProvider reviewId={null}>
+        <DiffFile file={mockFile} defaultExpanded reviewed onReviewedChange={onReviewedChange} />
+      </CommentProvider>
+    )
+    expect(screen.queryByText('line 1')).toBeNull()
+
+    rerender(
+      <CommentProvider reviewId={null}>
+        <DiffFile file={mockFile} defaultExpanded reviewed={false} onReviewedChange={onReviewedChange} />
+      </CommentProvider>
+    )
+    expect(screen.getByText('line 1')).toBeDefined()
   })
 
   it('shows renamed file path format', () => {

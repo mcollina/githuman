@@ -31,6 +31,10 @@ interface BrowsableDiffViewProps {
   ) => void
   version?: 'staged' | 'working' // Version for fetching file content (markdown preview, images)
 
+  // Reviewed file tracking (shows a reviewed checkbox per file when provided)
+  reviewedFiles?: Set<string>
+  onReviewedChange?: (filePath: string, reviewed: boolean) => void
+
   // Staging props (for unstaged view)
   showStageButtons?: boolean
   onStageFile?: (path: string) => void
@@ -118,6 +122,8 @@ export function BrowsableDiffView ({
   reviewId,
   onLineClick,
   version = 'staged',
+  reviewedFiles,
+  onReviewedChange,
   showStageButtons,
   onStageFile,
   staging,
@@ -301,6 +307,8 @@ export function BrowsableDiffView ({
               reviewId={reviewId}
               onLineClick={onLineClick}
               version={version}
+              reviewedFiles={reviewedFiles}
+              onReviewedChange={onReviewedChange}
             />
             )}
       </div>
