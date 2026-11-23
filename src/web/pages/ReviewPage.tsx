@@ -5,9 +5,12 @@ import { CommentProvider, useCommentContext, getLineKey } from '../contexts/Comm
 import { useCommentStats } from '../hooks/useComments'
 import { useReview, useUpdateReview } from '../hooks/useReviews'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { useReviewedFiles } from '../hooks/useReviewedFiles'
 import { reviewsApi } from '../api/reviews'
 import { cn } from '../lib/utils'
-import type { ReviewStatus, ReviewSourceType } from '../../shared/types'
+import type { DiffFileMetadata, ReviewStatus, ReviewSourceType } from '../../shared/types'
+
+const EMPTY_FILES: DiffFileMetadata[] = []
 
 function getSourceLabel (sourceType: ReviewSourceType, sourceRef: string | null) {
   if (sourceType === 'staged') {
@@ -110,6 +113,11 @@ export function ReviewPage () {
   // Browse mode state (controlled by parent, passed to BrowsableDiffView)
   const [browseMode, setBrowseMode] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+
+  const { reviewedFiles, setFileReviewed } = useReviewedFiles(
+    data?.files ?? EMPTY_FILES,
+    data ? `review:${data.id}` : undefined
+  )
 
   // Compute ref for browse mode
   const browseRef = useMemo(() => {
@@ -225,6 +233,8 @@ export function ReviewPage () {
         onFileSelect={handleFileSelect}
         allowComments
         reviewId={id}
+        reviewedFiles={reviewedFiles}
+        onReviewedChange={setFileReviewed}
         browseRef={browseRef}
         browseMode={browseMode}
         onBrowseModeChange={setBrowseMode}

@@ -14,9 +14,13 @@ import {
 } from '../hooks/useStagedDiff'
 import { useCreateReview } from '../hooks/useReviews'
 import { useServerEvents } from '../hooks/useServerEvents'
+import { useReviewedFiles } from '../hooks/useReviewedFiles'
 import { cn } from '../lib/utils'
+import type { DiffFile } from '../../shared/types'
 
 type TabType = 'staged' | 'unstaged'
+
+const EMPTY_FILES: DiffFile[] = []
 
 // Component to set active comment line after review is created
 function PendingLineActivator ({
@@ -228,10 +232,15 @@ export function StagedChangesPage () {
     }
   }
 
+  const { reviewedFiles, setFileReviewed } = useReviewedFiles(
+    staged.data?.files ?? EMPTY_FILES,
+    staged.data?.repository.path
+  )
+
   const loading = staged.loading || unstaged.loading
   const error = staged.error || unstaged.error
 
-  const stagedFiles = staged.data?.files ?? []
+  const stagedFiles = staged.data?.files ?? EMPTY_FILES
   const unstagedFiles = unstaged.data?.files ?? []
   const hasStagedChanges = stagedFiles.length > 0
   const hasUnstagedChanges = unstagedFiles.length > 0
@@ -389,6 +398,8 @@ export function StagedChangesPage () {
                   : undefined
             }
               version={activeTab === 'unstaged' ? 'working' : 'staged'}
+              reviewedFiles={activeTab === 'staged' ? reviewedFiles : undefined}
+              onReviewedChange={activeTab === 'staged' ? setFileReviewed : undefined}
               showStageButtons={activeTab === 'unstaged'}
               onStageFile={handleStageFile}
               staging={staging}

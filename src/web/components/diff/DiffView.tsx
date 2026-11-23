@@ -11,9 +11,11 @@ interface DiffViewProps {
   reviewId?: string; // If provided, enables lazy loading of hunks
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
   version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
+  reviewedFiles?: Set<string>;
+  onReviewedChange?: (filePath: string, reviewed: boolean) => void;
 }
 
-export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick, version = 'staged' }: DiffViewProps) {
+export function DiffView ({ files, summary, selectedFile, forceExpandedFile, allowComments = false, reviewId, onLineClick, version = 'staged', reviewedFiles, onReviewedChange }: DiffViewProps) {
   // Scroll to the selected file when it changes
   useEffect(() => {
     if (!selectedFile) return
@@ -92,6 +94,8 @@ export function DiffView ({ files, summary, selectedFile, forceExpandedFile, all
               allowComments={allowComments}
               onLineClick={onLineClick}
               version={version}
+              reviewed={reviewedFiles?.has(filePath) ?? false}
+              onReviewedChange={onReviewedChange}
             />
           )
         })}

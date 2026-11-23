@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { cn } from '../../lib/utils'
 import { DiffHunk } from './DiffHunk'
 import { FullFileView } from './FullFileView'
@@ -15,6 +15,8 @@ interface DiffFileProps {
   allowComments?: boolean;
   onLineClick?: (filePath: string, lineNumber: number, lineType: 'added' | 'removed' | 'context') => void;
   version?: 'staged' | 'working'; // Version for fetching file content (markdown preview, images)
+  reviewed?: boolean;
+  onReviewedChange?: (filePath: string, reviewed: boolean) => void; // If provided, shows the reviewed checkbox
 }
 
 function hasHunks (file: DiffFileMetadata | DiffFileType): file is DiffFileType {
@@ -43,14 +45,28 @@ function getStatusBadge (status: DiffFileMetadata['status']) {
   )
 }
 
-export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick, version = 'staged' }: DiffFileProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpanded, allowComments = false, onLineClick, version = 'staged', reviewed = false, onReviewedChange }: DiffFileProps) {
+  // Reviewed files start collapsed unless explicitly forced open
+  const [expanded, setExpanded] = useState(forceExpanded || (defaultExpanded && !reviewed))
   const [loadedHunks, setLoadedHunks] = useState<DiffHunkType[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // If forceExpanded is true, ensure the file is expanded
-  const isExpanded = forceExpanded || expanded
+  // Expand when the file becomes forced open (e.g. selected in the sidebar),
+  // while still allowing the user to collapse it afterwards
+  useEffect(() => {
+    if (forceExpanded) setExpanded(true)
+  }, [forceExpanded])
+
+  // Collapse when marked reviewed, expand again when the mark is removed
+  const previousReviewed = useRef(reviewed)
+  useEffect(() => {
+    if (previousReviewed.current === reviewed) return
+    previousReviewed.current = reviewed
+    setExpanded(!reviewed)
+  }, [reviewed])
+
+  const isExpanded = expanded
   const [viewMode, setViewMode] = useState<'diff' | 'full'>('diff')
 
   const displayPath = file.status === 'renamed'
@@ -125,6 +141,21 @@ export function DiffFile ({ file, reviewId, defaultExpanded = true, forceExpande
             <span className='text-[var(--gh-error)]'>-{file.deletions}</span>
           </span>
         </button>
+
+        {onReviewedChange && (
+          <label
+            className='flex items-center gap-1.5 border-l border-[var(--gh-border)] px-2 sm:px-3 py-2 cursor-pointer text-xs text-[var(--gh-text-secondary)] hover:text-[var(--gh-text-primary)] select-none'
+            title={reviewed ? 'Mark as not reviewed' : 'Mark as fully reviewed'}
+          >
+            <input
+              type='checkbox'
+              checked={reviewed}
+              onChange={(e) => onReviewedChange(filePath, e.target.checked)}
+              className='accent-[var(--gh-success)]'
+            />
+            <span className='hidden sm:inline'>Reviewed</span>
+          </label>
+        )}
 
         {/* View mode toggle */}
         {isExpanded && canShowFullFile && hunks && hunks.length > 0 && (
